@@ -10,7 +10,7 @@ import java.util.regex.Pattern;
 
 public class InvalidNameIgnorer implements Listener {
 
-    private final static Pattern USERNAME_PATTERN = Pattern.compile("^\\w+$");
+    private final static Pattern USERNAME_PATTERN = Pattern.compile("^-?\\w+$");
 
     @EventHandler(priority = EventPriority.LOWEST)
     public static void onPreTransaction(PreTransactionEvent event) {
