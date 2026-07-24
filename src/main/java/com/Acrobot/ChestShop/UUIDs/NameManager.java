@@ -134,7 +134,7 @@ public class NameManager {
             // no account with that shortname was found, try to get an offline player with that name
             OfflinePlayer offlinePlayer = ChestShop.getBukkitServer().getOfflinePlayer(shortName);
             if (offlinePlayer != null && offlinePlayer.getName() != null && offlinePlayer.getUniqueId() != null
-                    && offlinePlayer.getUniqueId().version() == uuidVersion) {
+                    && (!Properties.ENSURE_CORRECT_PLAYERID || offlinePlayer.getUniqueId().version() == uuidVersion)) {
                 account = storeUsername(new PlayerDTO(offlinePlayer.getUniqueId(), offlinePlayer.getName()));
             } else {
                 invalidPlayers.put(shortName.toLowerCase(), true);

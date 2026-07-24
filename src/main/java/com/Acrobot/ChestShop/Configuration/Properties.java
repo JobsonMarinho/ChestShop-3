@@ -166,4 +166,11 @@ public class Properties {
     @PrecededBySpace
     @ConfigurationComment("Add icons and make item names hoverable in transaction messages when ShowItem is installed?")
     public static boolean SHOWITEM_MESSAGE = true;
+
+    @PrecededBySpace
+    @ConfigurationComment("This makes sure that the UUIDs of player shop accounts match the server's UUID version (gotten from the first player who joins). Disable this on servers that mix player types, e.g. Java + Bedrock (Floodgate), otherwise the other type gets rejected!")
+    public static boolean ENSURE_CORRECT_PLAYERID = true;
+
+    @ConfigurationComment("Regexp that validates a player's name. If the name doesn't match, the player can neither create a shop nor buy/sell. For Bedrock (Floodgate) support include the prefix, e.g. \"^-?\\\\w+$\" allows names like -Claude.")
+    public static String VALID_PLAYERNAME_REGEXP = "^-?\\w+$";
 }
