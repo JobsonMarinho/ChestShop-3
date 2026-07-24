@@ -29,6 +29,8 @@ public class Messages {
     @PrecededBySpace
     public static String NO_PERMISSION_BUY_PLAYER_SHOP = "&cVocê não possui Rank suficiente para comprar em lojas de jogadores!";
     public static String NO_PERMISSION_BUY_ADMIN_SHOP = "&cVocê não possui Rank suficiente para comprar nesta loja!";
+    public static String NO_PERMISSION_SELL_PLAYER_SHOP = "&cVocê não possui Rank suficiente para vender em lojas de jogadores!";
+    public static String NO_PERMISSION_SELL_ADMIN_SHOP = "&cVocê não possui Rank suficiente para vender nesta loja!";
 
     @PrecededBySpace
     public static String NOT_ENOUGH_SPACE_IN_INVENTORY = "You haven't got enough space in inventory!";

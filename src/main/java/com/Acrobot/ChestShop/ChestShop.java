@@ -313,6 +313,9 @@ public class ChestShop extends JavaPlugin {
     }
 
     private void registerPreTransactionEvents() {
+        // Registered first so the permission check runs before any other LOWEST-priority listener
+        registerEvent(new PermissionChecker());
+
         if (Properties.ALLOW_PARTIAL_TRANSACTIONS) {
             registerEvent(new PartialTransactionModule());
         } else {
@@ -322,7 +325,6 @@ public class ChestShop extends JavaPlugin {
         registerEvent(new InvalidNameIgnorer());
         registerEvent(new CreativeModeIgnorer());
         registerEvent(new ErrorMessageSender());
-        registerEvent(new PermissionChecker());
         registerEvent(new PriceValidator());
         registerEvent(new ShopValidator());
         registerEvent(new SpamClickProtector());

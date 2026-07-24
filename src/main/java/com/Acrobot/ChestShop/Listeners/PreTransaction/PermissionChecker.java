@@ -12,6 +12,8 @@ import org.bukkit.inventory.ItemStack;
 
 import static com.Acrobot.ChestShop.Events.PreTransactionEvent.TransactionOutcome.CLIENT_CANNOT_BUY_IN_ADMIN_SHOP;
 import static com.Acrobot.ChestShop.Events.PreTransactionEvent.TransactionOutcome.CLIENT_CANNOT_BUY_IN_PLAYER_SHOP;
+import static com.Acrobot.ChestShop.Events.PreTransactionEvent.TransactionOutcome.CLIENT_CANNOT_SELL_IN_ADMIN_SHOP;
+import static com.Acrobot.ChestShop.Events.PreTransactionEvent.TransactionOutcome.CLIENT_CANNOT_SELL_IN_PLAYER_SHOP;
 import static com.Acrobot.ChestShop.Events.PreTransactionEvent.TransactionOutcome.CLIENT_DOES_NOT_HAVE_PERMISSION;
 import static com.Acrobot.ChestShop.Events.TransactionEvent.TransactionType.BUY;
 
@@ -27,7 +29,22 @@ public class PermissionChecker implements Listener {
 
         Player client = event.getClient();
         TransactionEvent.TransactionType transactionType = event.getTransactionType();
+        boolean adminShop = ChestShopSign.isAdminShop(event.getSign());
 
+        // Rank gate first: buying/selling in player shops and Admin Shops each require their own permission
+        if (transactionType == BUY) {
+            if (!Permission.has(client, adminShop ? Permission.BUY_ADMIN_SHOP : Permission.BUY_PLAYER_SHOP)) {
+                event.setCancelled(adminShop ? CLIENT_CANNOT_BUY_IN_ADMIN_SHOP : CLIENT_CANNOT_BUY_IN_PLAYER_SHOP);
+                return;
+            }
+        } else {
+            if (!Permission.has(client, adminShop ? Permission.SELL_ADMIN_SHOP : Permission.SELL_PLAYER_SHOP)) {
+                event.setCancelled(adminShop ? CLIENT_CANNOT_SELL_IN_ADMIN_SHOP : CLIENT_CANNOT_SELL_IN_PLAYER_SHOP);
+                return;
+            }
+        }
+
+        // Generic per-item buy/sell permission
         for (ItemStack stock : event.getStock()) {
             String matID = stock.getType().toString().toLowerCase();
 
@@ -42,17 +59,6 @@ public class PermissionChecker implements Listener {
             if (!hasPerm) {
                 event.setCancelled(CLIENT_DOES_NOT_HAVE_PERMISSION);
                 return;
-            }
-        }
-
-        // Restrict buying based on the shop type: player shops and Admin Shops require their own permission
-        if (transactionType == BUY) {
-            if (ChestShopSign.isAdminShop(event.getSign())) {
-                if (!Permission.has(client, Permission.BUY_ADMIN_SHOP)) {
-                    event.setCancelled(CLIENT_CANNOT_BUY_IN_ADMIN_SHOP);
-                }
-            } else if (!Permission.has(client, Permission.BUY_PLAYER_SHOP)) {
-                event.setCancelled(CLIENT_CANNOT_BUY_IN_PLAYER_SHOP);
             }
         }
     }

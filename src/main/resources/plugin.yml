@@ -34,6 +34,8 @@ permissions:
         ChestShop.admin: true
         ChestShop.shop.buy.playershop: true
         ChestShop.shop.buy.adminshop: true
+        ChestShop.shop.sell.playershop: true
+        ChestShop.shop.sell.adminshop: true
   ChestShop.shop.*:
     description: Gives access to all user ChestShop permissions
     children:
@@ -70,6 +72,12 @@ permissions:
     default: false
   ChestShop.shop.sell:
     description: Allows user to sell to a shop
+  ChestShop.shop.sell.playershop:
+    description: Allows the user to sell to shops created by players (e.g. Rank04 and above)
+    default: false
+  ChestShop.shop.sell.adminshop:
+    description: Allows the user to sell to Admin Shops (e.g. Rank00 and above)
+    default: false
   ChestShop.nofee:
     description: User doesn't have to pay the shop creation fee.
   ChestShop.toggle:

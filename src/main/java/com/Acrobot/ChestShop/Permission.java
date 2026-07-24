@@ -28,6 +28,9 @@ public enum Permission {
     SELL_ID("ChestShop.shop.sell."),
     SELL("ChestShop.shop.sell"),
 
+    SELL_PLAYER_SHOP("ChestShop.shop.sell.playershop"),
+    SELL_ADMIN_SHOP("ChestShop.shop.sell.adminshop"),
+
     ADMIN("ChestShop.admin"),
     MOD("ChestShop.mod"),
     OTHER_NAME("ChestShop.name."),
