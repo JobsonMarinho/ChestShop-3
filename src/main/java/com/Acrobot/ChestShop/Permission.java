@@ -22,6 +22,9 @@ public enum Permission {
     BUY("ChestShop.shop.buy"),
     BUY_ID("ChestShop.shop.buy."),
 
+    BUY_PLAYER_SHOP("ChestShop.shop.buy.playershop"),
+    BUY_ADMIN_SHOP("ChestShop.shop.buy.adminshop"),
+
     SELL_ID("ChestShop.shop.sell."),
     SELL("ChestShop.shop.sell"),
 

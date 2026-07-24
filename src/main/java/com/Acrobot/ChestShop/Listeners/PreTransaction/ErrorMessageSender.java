@@ -41,6 +41,12 @@ public class ErrorMessageSender implements Listener {
             case CLIENT_DOES_NOT_HAVE_PERMISSION:
                 message = Messages.NO_PERMISSION;
                 break;
+            case CLIENT_CANNOT_BUY_IN_PLAYER_SHOP:
+                message = Messages.NO_PERMISSION_BUY_PLAYER_SHOP;
+                break;
+            case CLIENT_CANNOT_BUY_IN_ADMIN_SHOP:
+                message = Messages.NO_PERMISSION_BUY_ADMIN_SHOP;
+                break;
             case CLIENT_DOES_NOT_HAVE_ENOUGH_MONEY:
                 message = Messages.NOT_ENOUGH_MONEY;
                 break;
