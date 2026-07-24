@@ -6,6 +6,7 @@ import com.Acrobot.ChestShop.Permission;
 import com.Acrobot.ChestShop.Signs.ChestShopSign;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
+import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
 import org.bukkit.inventory.ItemStack;
 
@@ -18,7 +19,7 @@ import static com.Acrobot.ChestShop.Events.TransactionEvent.TransactionType.BUY;
  * @author Acrobot
  */
 public class PermissionChecker implements Listener {
-    @EventHandler
+    @EventHandler(priority = EventPriority.LOWEST)
     public static void onPermissionCheck(PreTransactionEvent event) {
         if (event.isCancelled()) {
             return;
