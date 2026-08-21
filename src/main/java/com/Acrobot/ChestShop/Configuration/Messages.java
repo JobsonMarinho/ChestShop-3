@@ -113,6 +113,28 @@ public class Messages {
             "&8Confira os dados antes de confirmar.");
 
     @PrecededBySpace
+    public static String CONFIRMATION_SETTINGS_TITLE = "Confirmação de transações";
+    public static String CONFIRMATION_SETTINGS_NAME = "&aConfigurações";
+    public static List<String> CONFIRMATION_SETTINGS_LORE = Arrays.asList(
+            "&7Escolha em quais lojas você quer confirmar.",
+            "&eClique para abrir");
+    public static String CONFIRMATION_SETTINGS_ADMIN_SHOPS = "Lojas do servidor";
+    public static String CONFIRMATION_SETTINGS_PLAYER_SHOPS = "Lojas de jogadores";
+    public static List<String> CONFIRMATION_SETTINGS_ON_LORE = Arrays.asList(
+            "&7Você confirma antes de fechar negócio.",
+            "&eClique para desligar");
+    public static List<String> CONFIRMATION_SETTINGS_OFF_LORE = Arrays.asList(
+            "&7A transação acontece na hora, sem perguntar.",
+            "&eClique para ligar");
+    public static List<String> CONFIRMATION_SETTINGS_FORCED_OFF_LORE = Arrays.asList(
+            "&7A confirmação está desligada no servidor.",
+            "&8Você não pode mudar isso aqui.");
+    public static String CONFIRMATION_BACK_NAME = "&aVoltar";
+    public static List<String> CONFIRMATION_BACK_LORE = Arrays.asList(
+            "&7Para a confirmação da transação",
+            "&eClique para voltar");
+
+    @PrecededBySpace
     public static String CONFIRMATION_CANCELLED = "&cTransação cancelada.";
     public static String CONFIRMATION_EXPIRED = "&cO tempo para confirmar a transação acabou.";
     public static String CONFIRMATION_TOO_FAR = "&cVocê se afastou demais da loja!";

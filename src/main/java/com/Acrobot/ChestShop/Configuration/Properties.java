@@ -216,4 +216,16 @@ public class Properties {
 
     @ConfigurationComment("Slot (0-26) that shows the item being bought or sold")
     public static int CONFIRMATION_ITEM_SLOT = 13;
+
+    @ConfigurationComment("Slot (0-26) of the button that opens the player's own confirmation settings. Set it to -1 to hide the button.")
+    public static int CONFIRMATION_SETTINGS_SLOT = 26;
+
+    @ConfigurationComment("Item used for the settings button, written like on a shop sign")
+    public static String CONFIRMATION_SETTINGS_ITEM = "REDSTONE_COMPARATOR";
+
+    @ConfigurationComment("Item used for the back button of the settings menu, written like on a shop sign")
+    public static String CONFIRMATION_BACK_ITEM = "ARROW";
+
+    @ConfigurationComment("Should Bedrock players get a native form instead of the chest menu? (needs Floodgate; without it they get the chest menu through Geyser)")
+    public static boolean CONFIRMATION_BEDROCK_FORMS = true;
 }

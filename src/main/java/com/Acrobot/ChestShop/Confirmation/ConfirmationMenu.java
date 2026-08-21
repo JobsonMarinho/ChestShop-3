@@ -7,15 +7,17 @@ import com.Acrobot.ChestShop.ChestShop;
 import com.Acrobot.ChestShop.Configuration.Messages;
 import com.Acrobot.ChestShop.Configuration.Properties;
 import com.Acrobot.ChestShop.Economy.Economy;
+import com.Acrobot.ChestShop.Permission;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
+import org.bukkit.entity.Player;
 import org.bukkit.inventory.Inventory;
-import org.bukkit.inventory.InventoryHolder;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.UUID;
 
 import static com.Acrobot.ChestShop.Events.TransactionEvent.TransactionType.BUY;
 
@@ -25,17 +27,17 @@ import static com.Acrobot.ChestShop.Events.TransactionEvent.TransactionType.BUY;
  * <pre>
  *   . . . . . . . . .
  *   . . A . I . D . .     A - accept, D - decline, I - the item being traded
- *   . . . . . . . . .
+ *   . . . . . . . . S     S - opens the player's own confirmation settings
  * </pre>
  *
- * The three slots are configurable; everything else stays empty on purpose.
+ * The slots are configurable; everything else stays empty on purpose.
  *
  * The menu holds nothing but display copies: every click on it is cancelled by
  * {@link ConfirmationListener}, so no item can ever be dragged out of here.
  *
  * @author Acrobot
  */
-public class ConfirmationMenu implements InventoryHolder {
+public class ConfirmationMenu implements MenuHolder {
     public static final int MENU_SIZE = 27;
 
     private static final int DEFAULT_ACCEPT_SLOT = 11;
@@ -45,14 +47,20 @@ public class ConfirmationMenu implements InventoryHolder {
     /** Minecraft refuses to open an inventory whose title is longer than this */
     private static final int MAX_TITLE_LENGTH = 32;
 
+    /** Keeps a misconfigured layout from filling the console, one line per menu opened */
+    private static boolean layoutWarned = false;
+
+    private final UUID viewerId;
     private final PendingConfirmation pending;
     private final Inventory inventory;
 
-    // Resolved once per menu, so a reload can't move the buttons under an open menu
+    // Resolved once per menu, so a reload can't move the buttons under a menu that is already open
     private final int acceptSlot;
     private final int declineSlot;
+    private final int settingsSlot;
 
-    public ConfirmationMenu(PendingConfirmation pending) {
+    public ConfirmationMenu(Player viewer, PendingConfirmation pending) {
+        this.viewerId = viewer.getUniqueId();
         this.pending = pending;
         this.inventory = Bukkit.createInventory(this, MENU_SIZE, getTitle(pending));
 
@@ -61,7 +69,7 @@ public class ConfirmationMenu implements InventoryHolder {
         int item = resolveSlot(Properties.CONFIRMATION_ITEM_SLOT, DEFAULT_ITEM_SLOT);
 
         if (accept == decline || accept == item || decline == item) {
-            ChestShop.getBukkitLogger().warning("The confirmation menu has two things configured for the same slot ("
+            warnAboutLayout("The confirmation menu has two things configured for the same slot ("
                     + accept + "/" + decline + "/" + item + "), falling back to the default layout");
 
             accept = DEFAULT_ACCEPT_SLOT;
@@ -71,16 +79,27 @@ public class ConfirmationMenu implements InventoryHolder {
 
         this.acceptSlot = accept;
         this.declineSlot = decline;
+        this.settingsSlot = resolveSettingsSlot(viewer, accept, decline, item);
 
-        inventory.setItem(accept, createButton(Properties.CONFIRMATION_ACCEPT_ITEM, Material.WOOL, (short) 5,
+        inventory.setItem(accept, MenuButtons.create(Properties.CONFIRMATION_ACCEPT_ITEM, Material.WOOL, (short) 5,
                 Messages.CONFIRMATION_ACCEPT_NAME, Messages.CONFIRMATION_ACCEPT_LORE));
-        inventory.setItem(decline, createButton(Properties.CONFIRMATION_DECLINE_ITEM, Material.WOOL, (short) 14,
+        inventory.setItem(decline, MenuButtons.create(Properties.CONFIRMATION_DECLINE_ITEM, Material.WOOL, (short) 14,
                 Messages.CONFIRMATION_DECLINE_NAME, Messages.CONFIRMATION_DECLINE_LORE));
         inventory.setItem(item, createOfferItem(pending));
+
+        if (settingsSlot != -1) {
+            inventory.setItem(settingsSlot, MenuButtons.create(Properties.CONFIRMATION_SETTINGS_ITEM,
+                    Material.REDSTONE_COMPARATOR, (short) 0,
+                    Messages.CONFIRMATION_SETTINGS_NAME, Messages.CONFIRMATION_SETTINGS_LORE));
+        }
     }
 
     public Inventory getInventory() {
         return inventory;
+    }
+
+    public UUID getViewerId() {
+        return viewerId;
     }
 
     public PendingConfirmation getPending() {
@@ -95,8 +114,48 @@ public class ConfirmationMenu implements InventoryHolder {
         return slot == declineSlot;
     }
 
+    public boolean isSettingsSlot(int slot) {
+        return settingsSlot != -1 && slot == settingsSlot;
+    }
+
+    /**
+     * Lets a misconfigured layout be seen once instead of on every single menu.
+     */
+    public static void resetLayoutWarning() {
+        layoutWarned = false;
+    }
+
+    private static void warnAboutLayout(String message) {
+        if (!layoutWarned) {
+            layoutWarned = true;
+            ChestShop.getBukkitLogger().warning(message);
+        }
+    }
+
     private static int resolveSlot(int configured, int fallback) {
         return configured >= 0 && configured < MENU_SIZE ? configured : fallback;
+    }
+
+    /**
+     * @return Where the settings button goes, or -1 if it shouldn't be shown at all
+     */
+    private static int resolveSettingsSlot(Player viewer, int accept, int decline, int item) {
+        if (!ConfirmationManager.canChangePreferences(viewer)) {
+            return -1; //Nothing for this player to change in there
+        }
+
+        int slot = Properties.CONFIRMATION_SETTINGS_SLOT;
+        if (slot < 0 || slot >= MENU_SIZE) {
+            return -1; //Deliberately hidden
+        }
+
+        if (slot == accept || slot == decline || slot == item) {
+            warnAboutLayout("The confirmation menu's settings button is configured for slot " + slot
+                    + ", which is already taken - hiding the button");
+            return -1;
+        }
+
+        return slot;
     }
 
     private static String getTitle(PendingConfirmation pending) {
@@ -108,31 +167,35 @@ public class ConfirmationMenu implements InventoryHolder {
     }
 
     /**
-     * Builds one of the two buttons out of an item code from the config, falling back to a
-     * hardcoded item if the server owner typed something we can't parse.
+     * Spells the offer out, one line per entry of CONFIRMATION_ITEM_LORE.
+     *
+     * Shared with the Bedrock form, so a player on either platform reads exactly the same terms.
+     *
+     * @param pending Offer to describe
+     * @return The coloured lines
      */
-    private static ItemStack createButton(String itemCode, Material fallback, short fallbackData, String name, List<String> lore) {
-        ItemStack item = null;
+    public static List<String> describeOffer(PendingConfirmation pending) {
+        int amount = pending.getItemAmount();
+        double unitPrice = amount > 0 ? pending.getPrice() / amount : pending.getPrice();
 
-        if (itemCode != null && !itemCode.trim().isEmpty()) {
-            item = MaterialUtil.getItem(itemCode);
+        List<String> lines = new ArrayList<String>();
+        for (String line : Messages.CONFIRMATION_ITEM_LORE) {
+            lines.add(Configuration.getColoured(line
+                    .replace("%type", pending.getTransactionType() == BUY ? Messages.CONFIRMATION_TYPE_BUY : Messages.CONFIRMATION_TYPE_SELL)
+                    .replace("%item", getItemName(getDisplayItem(pending)))
+                    .replace("%amount", String.valueOf(amount))
+                    .replace("%unitprice", Economy.formatBalance(unitPrice))
+                    .replace("%price", Economy.formatBalance(pending.getPrice()))
+                    .replace("%owner", pending.getOwnerName())));
         }
 
-        if (item == null || item.getType() == Material.AIR) {
-            item = new ItemStack(fallback, 1, fallbackData);
-        }
+        return lines;
+    }
 
-        item.setAmount(1);
+    private static ItemStack getDisplayItem(PendingConfirmation pending) {
+        ItemStack[] merged = InventoryUtil.mergeSimilarStacks(pending.getStock());
 
-        ItemMeta meta = item.getItemMeta();
-        if (meta != null) {
-            meta.setDisplayName(Configuration.getColoured(name));
-            meta.setLore(colour(lore));
-            item.setItemMeta(meta);
-        }
-
-        // Marked last: applying an ItemMeta rebuilds the item's NBT and would drop the mark
-        return MenuItemGuard.mark(item);
+        return merged.length > 0 ? merged[0].clone() : new ItemStack(Material.BARRIER);
     }
 
     /**
@@ -140,24 +203,10 @@ public class ConfirmationMenu implements InventoryHolder {
      * into its lore so the player can see exactly what they are about to agree to.
      */
     private static ItemStack createOfferItem(PendingConfirmation pending) {
-        ItemStack[] merged = InventoryUtil.mergeSimilarStacks(pending.getStock());
-
-        ItemStack display = merged.length > 0 ? merged[0].clone() : new ItemStack(Material.BARRIER);
+        ItemStack display = getDisplayItem(pending);
         display.setAmount(Math.max(1, Math.min(pending.getItemAmount(), display.getMaxStackSize())));
 
-        int amount = pending.getItemAmount();
-        double unitPrice = amount > 0 ? pending.getPrice() / amount : pending.getPrice();
-
-        List<String> lore = new ArrayList<String>();
-        for (String line : Messages.CONFIRMATION_ITEM_LORE) {
-            lore.add(Configuration.getColoured(line
-                    .replace("%type", pending.getTransactionType() == BUY ? Messages.CONFIRMATION_TYPE_BUY : Messages.CONFIRMATION_TYPE_SELL)
-                    .replace("%item", getItemName(display))
-                    .replace("%amount", String.valueOf(amount))
-                    .replace("%unitprice", Economy.formatBalance(unitPrice))
-                    .replace("%price", Economy.formatBalance(pending.getPrice()))
-                    .replace("%owner", pending.getOwnerName())));
-        }
+        List<String> lore = describeOffer(pending);
 
         ItemMeta meta = display.getItemMeta();
         if (meta != null) {
@@ -182,15 +231,5 @@ public class ConfirmationMenu implements InventoryHolder {
         }
 
         return MaterialUtil.getName(item);
-    }
-
-    private static List<String> colour(List<String> lines) {
-        List<String> coloured = new ArrayList<String>(lines.size());
-
-        for (String line : lines) {
-            coloured.add(Configuration.getColoured(line));
-        }
-
-        return coloured;
     }
 }

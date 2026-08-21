@@ -25,8 +25,10 @@ import org.bukkit.inventory.ItemStack;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 
 import static com.Acrobot.ChestShop.Events.PreTransactionEvent.TransactionOutcome.AWAITING_CONFIRMATION;
@@ -64,6 +66,15 @@ public class ConfirmationManager {
 
     /** Main thread only - every Bukkit event this class hooks into is fired on the main thread */
     private static final Map<UUID, PendingConfirmation> PENDING = new HashMap<UUID, PendingConfirmation>();
+
+    /**
+     * Players who are being moved from one of our menus to another right now.
+     *
+     * Opening an inventory closes the one before it, and that close event is what normally throws
+     * the offer away. While a player is walking between the confirmation menu and its settings the
+     * offer has to survive, so the close is ignored for exactly that moment.
+     */
+    private static final Set<UUID> SWITCHING_MENUS = new HashSet<UUID>();
 
     /**
      * Should this transaction be shown to the client for confirmation first?
@@ -132,9 +143,22 @@ public class ConfirmationManager {
                 event.getPrice(),
                 InventoryUtil.countItems(event.getStock()));
 
+        if (BedrockForms.isBedrockPlayer(client)) {
+            // A form has no inventory to open, so the offer is registered first and taken back if
+            // Floodgate could not deliver it
+            PENDING.put(client.getUniqueId(), pending);
+            scheduleTimeout(client, pending);
+
+            if (!BedrockForms.sendConfirmation(client, pending, canChangePreferences(client))) {
+                take(client);
+            }
+
+            return;
+        }
+
         // The menu is opened before the offer is registered: opening an inventory closes whatever
         // the player had open, and that close event would otherwise throw this offer away again.
-        client.openInventory(new ConfirmationMenu(pending).getInventory());
+        client.openInventory(new ConfirmationMenu(client, pending).getInventory());
 
         if (!isViewingMenu(client)) {
             return; //Something refused to let the menu open - then there is nothing to accept either
@@ -142,6 +166,22 @@ public class ConfirmationManager {
 
         PENDING.put(client.getUniqueId(), pending);
         scheduleTimeout(client, pending);
+    }
+
+    /**
+     * @param player Player to check
+     * @return Is there anything in the settings this player is allowed to change?
+     */
+    public static boolean canChangePreferences(Player player) {
+        return Properties.CONFIRMATION_ALLOW_PLAYER_TOGGLE && Permission.has(player, Permission.CONFIRMATION_TOGGLE);
+    }
+
+    /**
+     * @param player Player to check
+     * @return The offer this player has waiting, or null
+     */
+    public static PendingConfirmation getPending(Player player) {
+        return PENDING.get(player.getUniqueId());
     }
 
     /**
@@ -186,6 +226,71 @@ public class ConfirmationManager {
 
         player.closeInventory();
         player.sendMessage(Messages.prefix(Messages.CONFIRMATION_CANCELLED));
+    }
+
+    /**
+     * The client clicked the settings button: show them their own confirmation settings, keeping
+     * the offer alive so the back button can return to it.
+     *
+     * @param player    Client of the shop
+     * @param menuOffer The offer the clicked menu was built for
+     */
+    public static void openPreferences(Player player, PendingConfirmation menuOffer) {
+        if (PENDING.get(player.getUniqueId()) != menuOffer) {
+            return;
+        }
+
+        if (BedrockForms.isBedrockPlayer(player)) {
+            BedrockForms.sendPreferences(player, menuOffer);
+            return;
+        }
+
+        switchTo(player, new PreferencesMenu(player, menuOffer).getInventory());
+    }
+
+    /**
+     * The client clicked the back button in their settings: return to the offer they came from, or
+     * tell them it is gone if it ran out while they were in there.
+     *
+     * @param player    Client of the shop
+     * @param menuOffer The offer the settings menu was opened from
+     */
+    public static void returnToConfirmation(Player player, PendingConfirmation menuOffer) {
+        if (PENDING.get(player.getUniqueId()) != menuOffer) {
+            player.closeInventory();
+            player.sendMessage(Messages.prefix(Messages.CONFIRMATION_EXPIRED));
+            return;
+        }
+
+        if (BedrockForms.isBedrockPlayer(player)) {
+            BedrockForms.sendConfirmation(player, menuOffer, canChangePreferences(player));
+            return;
+        }
+
+        switchTo(player, new ConfirmationMenu(player, menuOffer).getInventory());
+    }
+
+    /**
+     * @param player Player to check
+     * @return Is this player being moved between two of our menus right now?
+     */
+    public static boolean isSwitchingMenus(Player player) {
+        return SWITCHING_MENUS.contains(player.getUniqueId());
+    }
+
+    /**
+     * Opens another one of our menus without the close event in between dropping the offer.
+     * Everything here happens in one go on the main thread, so the flag can never be left behind.
+     */
+    private static void switchTo(Player player, Inventory menu) {
+        UUID uuid = player.getUniqueId();
+
+        SWITCHING_MENUS.add(uuid);
+        try {
+            player.openInventory(menu);
+        } finally {
+            SWITCHING_MENUS.remove(uuid);
+        }
     }
 
     /**
@@ -251,13 +356,23 @@ public class ConfirmationManager {
      * @return The confirmation menu backing this inventory, or null if it is not one
      */
     public static ConfirmationMenu getMenu(Inventory inventory) {
+        MenuHolder holder = getMenuHolder(inventory);
+
+        return holder instanceof ConfirmationMenu ? (ConfirmationMenu) holder : null;
+    }
+
+    /**
+     * @param inventory Inventory to check
+     * @return Any of ChestShop's own menus backing this inventory, or null if it is not one
+     */
+    public static MenuHolder getMenuHolder(Inventory inventory) {
         if (inventory == null) {
             return null;
         }
 
         InventoryHolder holder = inventory.getHolder();
 
-        return holder instanceof ConfirmationMenu ? (ConfirmationMenu) holder : null;
+        return holder instanceof MenuHolder ? (MenuHolder) holder : null;
     }
 
     /**

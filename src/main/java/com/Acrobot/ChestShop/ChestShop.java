@@ -7,8 +7,10 @@ import com.Acrobot.ChestShop.Commands.ItemInfo;
 import com.Acrobot.ChestShop.Commands.Reload;
 import com.Acrobot.ChestShop.Commands.Toggle;
 import com.Acrobot.ChestShop.Commands.Version;
+import com.Acrobot.ChestShop.Confirmation.BedrockForms;
 import com.Acrobot.ChestShop.Confirmation.ConfirmationListener;
 import com.Acrobot.ChestShop.Confirmation.ConfirmationManager;
+import com.Acrobot.ChestShop.Confirmation.ConfirmationMenu;
 import com.Acrobot.ChestShop.Confirmation.ConfirmationPreferences;
 import com.Acrobot.ChestShop.Confirmation.MenuItemGuard;
 import com.Acrobot.ChestShop.Configuration.Messages;
@@ -106,6 +108,7 @@ public class ChestShop extends JavaPlugin {
         NameManager.load();
         ConfirmationPreferences.load();
         MenuItemGuard.initialize();
+        BedrockForms.initialize();
 
         if (!Dependencies.loadPlugins()) {
             return;
@@ -235,6 +238,7 @@ public class ChestShop extends JavaPlugin {
 
         // A menu that was opened under the old settings must not be accepted under the new ones
         ConfirmationManager.cancelAll(Messages.CONFIRMATION_CANCELLED);
+        ConfirmationMenu.resetLayoutWarning();
 
         return true;
     }

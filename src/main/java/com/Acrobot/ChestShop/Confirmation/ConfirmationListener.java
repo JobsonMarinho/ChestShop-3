@@ -2,6 +2,8 @@ package com.Acrobot.ChestShop.Confirmation;
 
 import com.Acrobot.ChestShop.ChestShop;
 import com.Acrobot.ChestShop.Configuration.Messages;
+import com.Acrobot.ChestShop.Configuration.Properties;
+import com.Acrobot.ChestShop.Permission;
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
 import org.bukkit.event.Event;
@@ -16,11 +18,11 @@ import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
 
 /**
- * Drives the confirmation menu and, just as importantly, seals it shut.
+ * Drives ChestShop's menus and, just as importantly, seals them shut.
  *
- * The menu shows copies of real items. If a player could shift click, drag, hotbar swap or drop one
- * of them, the menu itself would hand out free items - so every single click and drag on this
- * inventory is refused, no matter which slot it lands on.
+ * The menus show copies of real items. If a player could shift click, drag, hotbar swap or drop one
+ * of them, a menu would hand out free items - so every single click and drag on them is refused, no
+ * matter which slot it lands on, before any button is even looked at.
  *
  * Refusing the click is the first line of defence, not the only one: a cancel can lose the race to
  * lag or to another plugin that un-cancels the event later in the chain. That is what the NBT mark
@@ -38,7 +40,7 @@ public class ConfirmationListener implements Listener {
 
     @EventHandler(priority = EventPriority.LOWEST)
     public void onInventoryClick(InventoryClickEvent event) {
-        ConfirmationMenu menu = ConfirmationManager.getMenu(event.getView().getTopInventory());
+        MenuHolder menu = ConfirmationManager.getMenuHolder(event.getView().getTopInventory());
         if (menu == null) {
             return;
         }
@@ -52,25 +54,65 @@ public class ConfirmationListener implements Listener {
         }
 
         Player player = (Player) event.getWhoClicked();
-        if (!menu.getPending().getClientId().equals(player.getUniqueId())) {
+        if (!menu.getViewerId().equals(player.getUniqueId())) {
             return;
         }
 
         int slot = event.getRawSlot();
-        if (slot < 0 || slot >= ConfirmationMenu.MENU_SIZE) {
+        if (slot < 0 || slot >= event.getView().getTopInventory().getSize()) {
             return; //The player clicked their own inventory
         }
 
+        if (menu instanceof ConfirmationMenu) {
+            onConfirmationClick(player, (ConfirmationMenu) menu, slot);
+        } else if (menu instanceof PreferencesMenu) {
+            onPreferencesClick(player, (PreferencesMenu) menu, slot);
+        }
+    }
+
+    private static void onConfirmationClick(Player player, ConfirmationMenu menu, int slot) {
         if (menu.isAcceptSlot(slot)) {
             ConfirmationManager.accept(player, menu.getPending());
         } else if (menu.isDeclineSlot(slot)) {
             ConfirmationManager.decline(player, menu.getPending());
+        } else if (menu.isSettingsSlot(slot)) {
+            ConfirmationManager.openPreferences(player, menu.getPending());
         }
+    }
+
+    private static void onPreferencesClick(Player player, PreferencesMenu menu, int slot) {
+        if (menu.isBackSlot(slot)) {
+            ConfirmationManager.returnToConfirmation(player, menu.getPending());
+            return;
+        }
+
+        boolean adminShop = menu.isAdminShopsSlot(slot);
+        if (!adminShop && !menu.isPlayerShopsSlot(slot)) {
+            return;
+        }
+
+        // The menu is only built for players who may change this, but the config can be reloaded
+        // while it is open, so the permission is checked again on the click that acts on it
+        if (!Properties.CONFIRMATION_ALLOW_PLAYER_TOGGLE || !Permission.has(player, Permission.CONFIRMATION_TOGGLE)) {
+            player.sendMessage(Messages.prefix(Messages.CONFIRMATION_TOGGLE_BLOCKED));
+            return;
+        }
+
+        if (!PreferencesMenu.isChangeable(adminShop)) {
+            return; //The server turned confirmations off there - the lore already says so
+        }
+
+        boolean enabled = !ConfirmationPreferences.wantsConfirmation(player, adminShop);
+        ConfirmationPreferences.setConfirmation(player, adminShop, enabled);
+
+        // Redrawn in place: reopening would fire a close event and drop the offer still waiting
+        menu.refresh(player);
+        player.updateInventory();
     }
 
     @EventHandler(priority = EventPriority.LOWEST)
     public void onInventoryDrag(InventoryDragEvent event) {
-        if (ConfirmationManager.getMenu(event.getView().getTopInventory()) == null) {
+        if (ConfirmationManager.getMenuHolder(event.getView().getTopInventory()) == null) {
             return;
         }
 
@@ -80,18 +122,22 @@ public class ConfirmationListener implements Listener {
 
     @EventHandler(priority = EventPriority.MONITOR)
     public void onInventoryClose(InventoryCloseEvent event) {
-        if (ConfirmationManager.getMenu(event.getInventory()) == null || !(event.getPlayer() instanceof Player)) {
+        MenuHolder menu = ConfirmationManager.getMenuHolder(event.getInventory());
+        if (menu == null || !(event.getPlayer() instanceof Player)) {
             return;
         }
 
         final Player player = (Player) event.getPlayer();
 
-        // Closing the menu in any other way than through the buttons simply drops the offer
-        ConfirmationManager.cancel(player, Messages.CONFIRMATION_CANCELLED);
+        // Walking from the confirmation menu into its settings and back closes one to open the
+        // other; only a close that really ends the visit drops the offer
+        if (!ConfirmationManager.isSwitchingMenus(player)) {
+            ConfirmationManager.cancel(player, Messages.CONFIRMATION_CANCELLED);
+        }
 
-        // A menu item can only enter a real inventory through this menu, so sweeping when this menu
-        // closes - rather than on every inventory close on the server - covers the same ground
-        sweepLater(player, "closed the confirmation menu", CLOSE_SWEEP_DELAY);
+        // A menu item can only enter a real inventory through one of these menus, so sweeping when
+        // one closes - rather than on every inventory close on the server - covers the same ground
+        sweepLater(player, "closed a ChestShop menu", CLOSE_SWEEP_DELAY);
     }
 
     /**
