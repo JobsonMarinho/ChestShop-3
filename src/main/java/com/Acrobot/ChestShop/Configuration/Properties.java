@@ -207,4 +207,13 @@ public class Properties {
 
     @ConfigurationComment("Item used for the decline buttons of the menu, written like on a shop sign")
     public static String CONFIRMATION_DECLINE_ITEM = "WOOL:14";
+
+    @ConfigurationComment("Slot (0-26) of the accept button. The menu is 3 rows of 9, so the middle row is 9 to 17.")
+    public static int CONFIRMATION_ACCEPT_SLOT = 11;
+
+    @ConfigurationComment("Slot (0-26) of the decline button")
+    public static int CONFIRMATION_DECLINE_SLOT = 15;
+
+    @ConfigurationComment("Slot (0-26) that shows the item being bought or sold")
+    public static int CONFIRMATION_ITEM_SLOT = 13;
 }

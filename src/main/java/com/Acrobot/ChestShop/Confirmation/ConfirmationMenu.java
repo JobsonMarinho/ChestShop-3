@@ -3,6 +3,7 @@ package com.Acrobot.ChestShop.Confirmation;
 import com.Acrobot.Breeze.Configuration.Configuration;
 import com.Acrobot.Breeze.Utils.InventoryUtil;
 import com.Acrobot.Breeze.Utils.MaterialUtil;
+import com.Acrobot.ChestShop.ChestShop;
 import com.Acrobot.ChestShop.Configuration.Messages;
 import com.Acrobot.ChestShop.Configuration.Properties;
 import com.Acrobot.ChestShop.Economy.Economy;
@@ -22,10 +23,12 @@ import static com.Acrobot.ChestShop.Events.TransactionEvent.TransactionType.BUY;
  * The 27 slot menu a player has to go through before a transaction is made.
  *
  * <pre>
- *   A A A A . D D D D
- *   A A A A I D D D D     A - accept, D - decline, I - the item being traded
- *   A A A A . D D D D
+ *   . . . . . . . . .
+ *   . . A . I . D . .     A - accept, D - decline, I - the item being traded
+ *   . . . . . . . . .
  * </pre>
+ *
+ * The three slots are configurable; everything else stays empty on purpose.
  *
  * The menu holds nothing but display copies: every click on it is cancelled by
  * {@link ConfirmationListener}, so no item can ever be dragged out of here.
@@ -34,10 +37,10 @@ import static com.Acrobot.ChestShop.Events.TransactionEvent.TransactionType.BUY;
  */
 public class ConfirmationMenu implements InventoryHolder {
     public static final int MENU_SIZE = 27;
-    public static final int ITEM_SLOT = 13;
 
-    private static final int[] ACCEPT_SLOTS = {0, 1, 2, 3, 9, 10, 11, 12, 18, 19, 20, 21};
-    private static final int[] DECLINE_SLOTS = {5, 6, 7, 8, 14, 15, 16, 17, 23, 24, 25, 26};
+    private static final int DEFAULT_ACCEPT_SLOT = 11;
+    private static final int DEFAULT_DECLINE_SLOT = 15;
+    private static final int DEFAULT_ITEM_SLOT = 13;
 
     /** Minecraft refuses to open an inventory whose title is longer than this */
     private static final int MAX_TITLE_LENGTH = 32;
@@ -45,23 +48,35 @@ public class ConfirmationMenu implements InventoryHolder {
     private final PendingConfirmation pending;
     private final Inventory inventory;
 
+    // Resolved once per menu, so a reload can't move the buttons under an open menu
+    private final int acceptSlot;
+    private final int declineSlot;
+
     public ConfirmationMenu(PendingConfirmation pending) {
         this.pending = pending;
         this.inventory = Bukkit.createInventory(this, MENU_SIZE, getTitle(pending));
 
-        ItemStack accept = createButton(Properties.CONFIRMATION_ACCEPT_ITEM, Material.WOOL, (short) 5,
-                Messages.CONFIRMATION_ACCEPT_NAME, Messages.CONFIRMATION_ACCEPT_LORE);
-        ItemStack decline = createButton(Properties.CONFIRMATION_DECLINE_ITEM, Material.WOOL, (short) 14,
-                Messages.CONFIRMATION_DECLINE_NAME, Messages.CONFIRMATION_DECLINE_LORE);
+        int accept = resolveSlot(Properties.CONFIRMATION_ACCEPT_SLOT, DEFAULT_ACCEPT_SLOT);
+        int decline = resolveSlot(Properties.CONFIRMATION_DECLINE_SLOT, DEFAULT_DECLINE_SLOT);
+        int item = resolveSlot(Properties.CONFIRMATION_ITEM_SLOT, DEFAULT_ITEM_SLOT);
 
-        for (int slot : ACCEPT_SLOTS) {
-            inventory.setItem(slot, accept.clone());
-        }
-        for (int slot : DECLINE_SLOTS) {
-            inventory.setItem(slot, decline.clone());
+        if (accept == decline || accept == item || decline == item) {
+            ChestShop.getBukkitLogger().warning("The confirmation menu has two things configured for the same slot ("
+                    + accept + "/" + decline + "/" + item + "), falling back to the default layout");
+
+            accept = DEFAULT_ACCEPT_SLOT;
+            decline = DEFAULT_DECLINE_SLOT;
+            item = DEFAULT_ITEM_SLOT;
         }
 
-        inventory.setItem(ITEM_SLOT, createOfferItem(pending));
+        this.acceptSlot = accept;
+        this.declineSlot = decline;
+
+        inventory.setItem(accept, createButton(Properties.CONFIRMATION_ACCEPT_ITEM, Material.WOOL, (short) 5,
+                Messages.CONFIRMATION_ACCEPT_NAME, Messages.CONFIRMATION_ACCEPT_LORE));
+        inventory.setItem(decline, createButton(Properties.CONFIRMATION_DECLINE_ITEM, Material.WOOL, (short) 14,
+                Messages.CONFIRMATION_DECLINE_NAME, Messages.CONFIRMATION_DECLINE_LORE));
+        inventory.setItem(item, createOfferItem(pending));
     }
 
     public Inventory getInventory() {
@@ -73,20 +88,15 @@ public class ConfirmationMenu implements InventoryHolder {
     }
 
     public boolean isAcceptSlot(int slot) {
-        return contains(ACCEPT_SLOTS, slot);
+        return slot == acceptSlot;
     }
 
     public boolean isDeclineSlot(int slot) {
-        return contains(DECLINE_SLOTS, slot);
+        return slot == declineSlot;
     }
 
-    private static boolean contains(int[] slots, int slot) {
-        for (int current : slots) {
-            if (current == slot) {
-                return true;
-            }
-        }
-        return false;
+    private static int resolveSlot(int configured, int fallback) {
+        return configured >= 0 && configured < MENU_SIZE ? configured : fallback;
     }
 
     private static String getTitle(PendingConfirmation pending) {
