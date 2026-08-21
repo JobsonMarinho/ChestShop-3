@@ -27,7 +27,7 @@ import static com.Acrobot.ChestShop.Events.TransactionEvent.TransactionType.BUY;
  * <pre>
  *   . . . . . . . . .
  *   . . A . I . D . .     A - accept, D - decline, I - the item being traded
- *   . . . . . . . . S     S - opens the player's own confirmation settings
+ *   . . . . X . . . S     X - "don't ask me again", S - opens the player's own settings
  * </pre>
  *
  * The slots are configurable; everything else stays empty on purpose.
@@ -58,6 +58,7 @@ public class ConfirmationMenu implements MenuHolder {
     private final int acceptSlot;
     private final int declineSlot;
     private final int settingsSlot;
+    private final int dismissSlot;
 
     public ConfirmationMenu(Player viewer, PendingConfirmation pending) {
         this.viewerId = viewer.getUniqueId();
@@ -79,7 +80,8 @@ public class ConfirmationMenu implements MenuHolder {
 
         this.acceptSlot = accept;
         this.declineSlot = decline;
-        this.settingsSlot = resolveSettingsSlot(viewer, accept, decline, item);
+        this.settingsSlot = resolveExtraSlot(viewer, Properties.CONFIRMATION_SETTINGS_SLOT, "settings", accept, decline, item, -1);
+        this.dismissSlot = resolveExtraSlot(viewer, Properties.CONFIRMATION_DISMISS_SLOT, "don't ask again", accept, decline, item, settingsSlot);
 
         inventory.setItem(accept, MenuButtons.create(Properties.CONFIRMATION_ACCEPT_ITEM, Material.WOOL, (short) 5,
                 Messages.CONFIRMATION_ACCEPT_NAME, Messages.CONFIRMATION_ACCEPT_LORE));
@@ -87,11 +89,33 @@ public class ConfirmationMenu implements MenuHolder {
                 Messages.CONFIRMATION_DECLINE_NAME, Messages.CONFIRMATION_DECLINE_LORE));
         inventory.setItem(item, createOfferItem(pending));
 
+        if (dismissSlot != -1) {
+            inventory.setItem(dismissSlot, MenuButtons.create(Properties.CONFIRMATION_DISMISS_ITEM,
+                    Material.LEVER, (short) 0,
+                    Messages.CONFIRMATION_DISMISS_NAME, dismissLore(pending)));
+        }
+
         if (settingsSlot != -1) {
             inventory.setItem(settingsSlot, MenuButtons.create(Properties.CONFIRMATION_SETTINGS_ITEM,
                     Material.REDSTONE_COMPARATOR, (short) 0,
                     Messages.CONFIRMATION_SETTINGS_NAME, Messages.CONFIRMATION_SETTINGS_LORE));
         }
+    }
+
+    /**
+     * The button says which shops it is about, so nobody turns the menu off everywhere by accident.
+     */
+    static List<String> dismissLore(PendingConfirmation pending) {
+        String shops = pending.isAdminShop()
+                ? Messages.CONFIRMATION_SETTINGS_ADMIN_SHOPS
+                : Messages.CONFIRMATION_SETTINGS_PLAYER_SHOPS;
+
+        List<String> lore = new ArrayList<String>();
+        for (String line : Messages.CONFIRMATION_DISMISS_LORE) {
+            lore.add(line.replace("%shops", shops));
+        }
+
+        return lore;
     }
 
     public Inventory getInventory() {
@@ -118,6 +142,10 @@ public class ConfirmationMenu implements MenuHolder {
         return settingsSlot != -1 && slot == settingsSlot;
     }
 
+    public boolean isDismissSlot(int slot) {
+        return dismissSlot != -1 && slot == dismissSlot;
+    }
+
     /**
      * Lets a misconfigured layout be seen once instead of on every single menu.
      */
@@ -137,25 +165,27 @@ public class ConfirmationMenu implements MenuHolder {
     }
 
     /**
-     * @return Where the settings button goes, or -1 if it shouldn't be shown at all
+     * Places one of the two optional buttons. Both only exist for players who are allowed to change
+     * their own settings, and both give way to the three that make the menu what it is.
+     *
+     * @return Where the button goes, or -1 if it shouldn't be shown at all
      */
-    private static int resolveSettingsSlot(Player viewer, int accept, int decline, int item) {
+    private static int resolveExtraSlot(Player viewer, int configured, String what, int accept, int decline, int item, int other) {
         if (!ConfirmationManager.canChangePreferences(viewer)) {
-            return -1; //Nothing for this player to change in there
+            return -1; //Nothing for this player to change
         }
 
-        int slot = Properties.CONFIRMATION_SETTINGS_SLOT;
-        if (slot < 0 || slot >= MENU_SIZE) {
+        if (configured < 0 || configured >= MENU_SIZE) {
             return -1; //Deliberately hidden
         }
 
-        if (slot == accept || slot == decline || slot == item) {
-            warnAboutLayout("The confirmation menu's settings button is configured for slot " + slot
+        if (configured == accept || configured == decline || configured == item || configured == other) {
+            warnAboutLayout("The confirmation menu's \"" + what + "\" button is configured for slot " + configured
                     + ", which is already taken - hiding the button");
             return -1;
         }
 
-        return slot;
+        return configured;
     }
 
     private static String getTitle(PendingConfirmation pending) {

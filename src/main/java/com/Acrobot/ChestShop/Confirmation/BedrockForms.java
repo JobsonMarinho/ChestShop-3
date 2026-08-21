@@ -9,6 +9,7 @@ import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
 
 import java.lang.reflect.Method;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 import java.util.function.Consumer;
@@ -106,31 +107,48 @@ public class BedrockForms {
         }
     }
 
+    /** What a button of the confirmation form does, in the order the buttons were added */
+    private enum FormAction {
+        ACCEPT, DECLINE, STOP_ASKING, SETTINGS
+    }
+
     /**
      * Shows the offer, with the same terms the Java menu spells out.
      *
-     * @param player       Client of the shop
-     * @param pending      Offer to show
-     * @param withSettings Should the settings button be offered?
+     * @param player     Client of the shop
+     * @param pending    Offer to show
+     * @param withExtras Should the optional buttons be offered?
      * @return Was the form sent?
      */
-    public static boolean sendConfirmation(final Player player, final PendingConfirmation pending, final boolean withSettings) {
+    public static boolean sendConfirmation(final Player player, final PendingConfirmation pending, boolean withExtras) {
         if (!available) {
             return false;
         }
 
         try {
+            // The buttons are tracked as they are added, so a hidden one can't shift what the
+            // others mean - a form only tells us which index was pressed
+            final List<FormAction> actions = new ArrayList<FormAction>();
+
             Object builder = formBuilder.invoke(null);
 
             builder = builderTitle.invoke(builder, plain(pending.getTransactionType() == BUY
                     ? Messages.CONFIRMATION_TITLE_BUY
                     : Messages.CONFIRMATION_TITLE_SELL));
             builder = builderContent.invoke(builder, join(ConfirmationMenu.describeOffer(pending)));
-            builder = builderButton.invoke(builder, plain(Messages.CONFIRMATION_ACCEPT_NAME));
-            builder = builderButton.invoke(builder, plain(Messages.CONFIRMATION_DECLINE_NAME));
 
-            if (withSettings) {
+            builder = builderButton.invoke(builder, plain(Messages.CONFIRMATION_ACCEPT_NAME));
+            actions.add(FormAction.ACCEPT);
+
+            builder = builderButton.invoke(builder, plain(Messages.CONFIRMATION_DECLINE_NAME));
+            actions.add(FormAction.DECLINE);
+
+            if (withExtras) {
+                builder = builderButton.invoke(builder, plain(Messages.CONFIRMATION_DISMISS_NAME));
+                actions.add(FormAction.STOP_ASKING);
+
                 builder = builderButton.invoke(builder, plain(Messages.CONFIRMATION_SETTINGS_NAME));
+                actions.add(FormAction.SETTINGS);
             }
 
             builder = builderValidHandler.invoke(builder, new Consumer<Object>() {
@@ -139,16 +157,23 @@ public class BedrockForms {
 
                     runOnMainThread(new Runnable() {
                         public void run() {
-                            if (!stillWaiting(player, pending)) {
+                            if (button < 0 || button >= actions.size() || !stillWaiting(player, pending)) {
                                 return;
                             }
 
-                            if (button == 0) {
-                                ConfirmationManager.accept(player, pending);
-                            } else if (button == 1) {
-                                ConfirmationManager.decline(player, pending);
-                            } else if (withSettings && button == 2) {
-                                ConfirmationManager.openPreferences(player, pending);
+                            switch (actions.get(button)) {
+                                case ACCEPT:
+                                    ConfirmationManager.accept(player, pending);
+                                    break;
+                                case DECLINE:
+                                    ConfirmationManager.decline(player, pending);
+                                    break;
+                                case STOP_ASKING:
+                                    ConfirmationManager.acceptAndStopAsking(player, pending);
+                                    break;
+                                case SETTINGS:
+                                    ConfirmationManager.openPreferences(player, pending);
+                                    break;
                             }
                         }
                     });

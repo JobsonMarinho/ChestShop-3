@@ -214,6 +214,33 @@ public class ConfirmationManager {
     }
 
     /**
+     * The client clicked "don't ask me again": go through with this transaction and stop asking
+     * about this kind of shop.
+     *
+     * Turning it off first means that if the player is on their last click of the day, the setting
+     * still sticks even when the transaction itself turns out to be impossible.
+     *
+     * @param player    Client of the shop
+     * @param menuOffer The offer the clicked menu was built for
+     */
+    public static void acceptAndStopAsking(Player player, PendingConfirmation menuOffer) {
+        if (PENDING.get(player.getUniqueId()) != menuOffer) {
+            return;
+        }
+
+        if (canChangePreferences(player)) {
+            boolean adminShop = menuOffer.isAdminShop();
+
+            ConfirmationPreferences.setConfirmation(player, adminShop, false);
+            player.sendMessage(Messages.prefix(adminShop
+                    ? Messages.CONFIRMATION_ADMIN_SHOPS_OFF
+                    : Messages.CONFIRMATION_PLAYER_SHOPS_OFF));
+        }
+
+        accept(player, menuOffer);
+    }
+
+    /**
      * The client clicked the decline button
      *
      * @param player    Client of the shop

@@ -75,6 +75,8 @@ public class ConfirmationListener implements Listener {
             ConfirmationManager.accept(player, menu.getPending());
         } else if (menu.isDeclineSlot(slot)) {
             ConfirmationManager.decline(player, menu.getPending());
+        } else if (menu.isDismissSlot(slot)) {
+            ConfirmationManager.acceptAndStopAsking(player, menu.getPending());
         } else if (menu.isSettingsSlot(slot)) {
             ConfirmationManager.openPreferences(player, menu.getPending());
         }

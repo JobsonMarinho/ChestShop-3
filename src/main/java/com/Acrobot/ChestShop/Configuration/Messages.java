@@ -129,6 +129,12 @@ public class Messages {
     public static List<String> CONFIRMATION_SETTINGS_FORCED_OFF_LORE = Arrays.asList(
             "&7A confirmação está desligada no servidor.",
             "&8Você não pode mudar isso aqui.");
+    public static String CONFIRMATION_DISMISS_NAME = "&aNão perguntar de novo";
+    public static List<String> CONFIRMATION_DISMISS_LORE = Arrays.asList(
+            "&7Conclui esta transação e desliga a",
+            "&7confirmação para &a%shops&7.",
+            "&8Para religar use /csconfirm.",
+            "&eClique para confirmar e desligar");
     public static String CONFIRMATION_BACK_NAME = "&aVoltar";
     public static List<String> CONFIRMATION_BACK_LORE = Arrays.asList(
             "&7Para a confirmação da transação",
