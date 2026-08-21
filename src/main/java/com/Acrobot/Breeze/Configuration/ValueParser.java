@@ -26,7 +26,9 @@ public class ValueParser {
             }
             return sb.toString();
         } else {
-            return '\"' + String.valueOf(object) + '\"';
+            // Backslashes and quotes need escaping inside a double-quoted YAML scalar
+            String escaped = String.valueOf(object).replace("\\", "\\\\").replace("\"", "\\\"");
+            return '\"' + escaped + '\"';
         }
     }
 
