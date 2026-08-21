@@ -121,7 +121,8 @@ public class ConfirmationMenu implements InventoryHolder {
             item.setItemMeta(meta);
         }
 
-        return item;
+        // Marked last: applying an ItemMeta rebuilds the item's NBT and would drop the mark
+        return MenuItemGuard.mark(item);
     }
 
     /**
@@ -159,7 +160,8 @@ public class ConfirmationMenu implements InventoryHolder {
             display.setItemMeta(meta);
         }
 
-        return display;
+        // This is only ever a display copy - the items a transaction really moves are never marked
+        return MenuItemGuard.mark(display);
     }
 
     private static String getItemName(ItemStack item) {

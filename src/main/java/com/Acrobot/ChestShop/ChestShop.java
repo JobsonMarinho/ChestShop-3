@@ -10,6 +10,7 @@ import com.Acrobot.ChestShop.Commands.Version;
 import com.Acrobot.ChestShop.Confirmation.ConfirmationListener;
 import com.Acrobot.ChestShop.Confirmation.ConfirmationManager;
 import com.Acrobot.ChestShop.Confirmation.ConfirmationPreferences;
+import com.Acrobot.ChestShop.Confirmation.MenuItemGuard;
 import com.Acrobot.ChestShop.Configuration.Messages;
 import com.Acrobot.ChestShop.Configuration.Properties;
 import com.Acrobot.ChestShop.Database.Migrations;
@@ -104,6 +105,7 @@ public class ChestShop extends JavaPlugin {
 
         NameManager.load();
         ConfirmationPreferences.load();
+        MenuItemGuard.initialize();
 
         if (!Dependencies.loadPlugins()) {
             return;
