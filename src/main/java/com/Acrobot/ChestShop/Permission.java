@@ -39,7 +39,12 @@ public enum Permission {
     NOFEE("ChestShop.nofee"),
     DISCOUNT("ChestShop.discount."),
 
-    NOTIFY_TOGGLE("ChestShop.toggle");
+    NOTIFY_TOGGLE("ChestShop.toggle"),
+
+    CONFIRMATION_TOGGLE("ChestShop.confirmation.toggle"),
+    CONFIRMATION_BYPASS("ChestShop.confirmation.bypass"),
+
+    RELOAD("ChestShop.reload");
 
     private final String permission;
 

@@ -122,7 +122,7 @@ public class PlayerInteract implements Listener {
         }
 
         //Bukkit.getLogger().info("ChestShop - DEBUG - "+block.getWorld().getName()+": "+block.getLocation().getBlockX()+", "+block.getLocation().getBlockY()+", "+block.getLocation().getBlockZ());
-        PreTransactionEvent pEvent = preparePreTransactionEvent(sign, player, action);
+        PreTransactionEvent pEvent = preparePreTransactionEvent(sign, player, action, player.isSneaking());
         if (pEvent == null)
             return;
 
@@ -134,7 +134,21 @@ public class PlayerInteract implements Listener {
         Bukkit.getPluginManager().callEvent(tEvent);
     }
 
-    private static PreTransactionEvent preparePreTransactionEvent(Sign sign, Player player, Action action) {
+    /**
+     * Builds the event describing the transaction a player is about to make.
+     *
+     * The sneaking state is passed in explicitly instead of being read from the player so that the
+     * confirmation menu can rebuild the very same offer later on, when the player is not crouching
+     * anymore. Everything else (stock, prices, inventories) is deliberately read from the world
+     * again on every call - never cache it, or a shop could be paid for items that are long gone.
+     *
+     * @param sign     Shop sign, freshly read from the world
+     * @param player   Shop client
+     * @param action   Click that triggered the transaction
+     * @param sneaking Was the player crouching when they clicked the sign?
+     * @return The prepared event or null if the shop cannot be used
+     */
+    public static PreTransactionEvent preparePreTransactionEvent(Sign sign, Player player, Action action, boolean sneaking) {
         String name = sign.getLine(NAME_LINE);
         String quantity = sign.getLine(QUANTITY_LINE);
         String prices = sign.getLine(PRICE_LINE);
@@ -180,7 +194,7 @@ public class PlayerInteract implements Listener {
             return null;
         }
 
-        if (Properties.SHIFT_SELLS_IN_STACKS && player.isSneaking() && price != PriceUtil.NO_PRICE && isAllowedForShift(action == buy)) {
+        if (Properties.SHIFT_SELLS_IN_STACKS && sneaking && price != PriceUtil.NO_PRICE && isAllowedForShift(action == buy)) {
             int newAmount = getStackAmount(item, ownerInventory, player, action);
             if (newAmount > 0) {
                 price = (price / amount) * newAmount;

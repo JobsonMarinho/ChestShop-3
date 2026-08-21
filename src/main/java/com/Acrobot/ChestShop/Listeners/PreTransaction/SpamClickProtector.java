@@ -24,6 +24,11 @@ public class SpamClickProtector implements Listener {
             return;
         }
 
+        if (event.isConfirmationReplay()) {
+            //The click that started this transaction has already been counted, before the confirmation menu opened
+            return;
+        }
+
         Player clicker = event.getClient();
 
         if (TIME_OF_LATEST_CLICK.containsKey(clicker) && (System.currentTimeMillis() - TIME_OF_LATEST_CLICK.get(clicker)) < Properties.SHOP_INTERACTION_INTERVAL) {

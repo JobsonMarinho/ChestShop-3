@@ -3,6 +3,9 @@ package com.Acrobot.ChestShop.Configuration;
 import com.Acrobot.Breeze.Configuration.Annotations.PrecededBySpace;
 import com.Acrobot.Breeze.Configuration.Configuration;
 
+import java.util.Arrays;
+import java.util.List;
+
 /**
  * @author Acrobot
  */
@@ -84,6 +87,53 @@ public class Messages {
     @PrecededBySpace
     public static String TOGGLE_MESSAGES_OFF = "You will no longer receive messages from your shop(s).";
     public static String TOGGLE_MESSAGES_ON = "You will now receive messages from your shop(s).";
+
+    @PrecededBySpace
+    public static String CONFIRMATION_TITLE_BUY = "Confirmar compra";
+    public static String CONFIRMATION_TITLE_SELL = "Confirmar venda";
+    public static String CONFIRMATION_TYPE_BUY = "Comprar";
+    public static String CONFIRMATION_TYPE_SELL = "Vender";
+
+    @PrecededBySpace
+    public static String CONFIRMATION_ACCEPT_NAME = "&aConfirmar";
+    public static List<String> CONFIRMATION_ACCEPT_LORE = Arrays.asList(
+            "&7A transação será concluída na hora.",
+            "&eClique para confirmar");
+    public static String CONFIRMATION_DECLINE_NAME = "&cRecusar";
+    public static List<String> CONFIRMATION_DECLINE_LORE = Arrays.asList(
+            "&7Nada será comprado nem vendido.",
+            "&eClique para cancelar");
+    public static List<String> CONFIRMATION_ITEM_LORE = Arrays.asList(
+            "&7Operação: &a%type",
+            "&7Item: &a%item",
+            "&7Quantidade: &a%amount",
+            "&7Preço por unidade: &a%unitprice",
+            "&7Preço total: &a%price",
+            "&7Loja: &a%owner",
+            "&8Confira os dados antes de confirmar.");
+
+    @PrecededBySpace
+    public static String CONFIRMATION_CANCELLED = "&cTransação cancelada.";
+    public static String CONFIRMATION_EXPIRED = "&cO tempo para confirmar a transação acabou.";
+    public static String CONFIRMATION_TOO_FAR = "&cVocê se afastou demais da loja!";
+    public static String CONFIRMATION_SHOP_GONE = "&cEsta loja não existe mais!";
+    public static String CONFIRMATION_OFFER_CHANGED = "&cA oferta desta loja mudou! Clique na placa de novo.";
+
+    @PrecededBySpace
+    public static String CONFIRMATION_SYSTEM_DISABLED = "&cO sistema de confirmação está desligado neste servidor.";
+    public static String CONFIRMATION_TOGGLE_BLOCKED = "&cVocê não pode alterar a confirmação de transações.";
+    public static String CONFIRMATION_ADMIN_SHOPS_ON = "Agora você confirma as transações nas lojas do servidor.";
+    public static String CONFIRMATION_ADMIN_SHOPS_OFF = "Você não confirma mais as transações nas lojas do servidor.";
+    public static String CONFIRMATION_PLAYER_SHOPS_ON = "Agora você confirma as transações nas lojas de jogadores.";
+    public static String CONFIRMATION_PLAYER_SHOPS_OFF = "Você não confirma mais as transações nas lojas de jogadores.";
+    public static String CONFIRMATION_STATUS = "Confirmação - lojas do servidor: &a%adminshops&r, lojas de jogadores: &a%playershops";
+    public static String CONFIRMATION_STATUS_ON = "ligada";
+    public static String CONFIRMATION_STATUS_OFF = "desligada";
+    public static String CONFIRMATION_STATUS_FORCED_OFF = "desligada pelo servidor";
+
+    @PrecededBySpace
+    public static String CONFIGURATION_RELOADED = "Configurações recarregadas!";
+    public static String CONFIGURATION_RELOAD_FAILED = "&cNão foi possível recarregar as configurações, veja o console.";
 
     public static String prefix(String message) {
         return Configuration.getColoured(prefix + message);

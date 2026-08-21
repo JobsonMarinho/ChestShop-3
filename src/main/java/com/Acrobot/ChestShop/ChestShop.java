@@ -1,10 +1,15 @@
 package com.Acrobot.ChestShop;
 
 import com.Acrobot.Breeze.Configuration.Configuration;
+import com.Acrobot.ChestShop.Commands.Confirm;
 import com.Acrobot.ChestShop.Commands.Give;
 import com.Acrobot.ChestShop.Commands.ItemInfo;
+import com.Acrobot.ChestShop.Commands.Reload;
 import com.Acrobot.ChestShop.Commands.Toggle;
 import com.Acrobot.ChestShop.Commands.Version;
+import com.Acrobot.ChestShop.Confirmation.ConfirmationListener;
+import com.Acrobot.ChestShop.Confirmation.ConfirmationManager;
+import com.Acrobot.ChestShop.Confirmation.ConfirmationPreferences;
 import com.Acrobot.ChestShop.Configuration.Messages;
 import com.Acrobot.ChestShop.Configuration.Properties;
 import com.Acrobot.ChestShop.Database.Migrations;
@@ -98,6 +103,7 @@ public class ChestShop extends JavaPlugin {
         itemDatabase = new ItemDatabase();
 
         NameManager.load();
+        ConfirmationPreferences.load();
 
         if (!Dependencies.loadPlugins()) {
             return;
@@ -123,6 +129,11 @@ public class ChestShop extends JavaPlugin {
         getCommand("csVersion").setExecutor(new Version());
         getCommand("csGive").setExecutor(new Give());
         getCommand("cstoggle").setExecutor(new Toggle());
+        getCommand("csreload").setExecutor(new Reload());
+
+        Confirm confirm = new Confirm();
+        getCommand("csconfirm").setExecutor(confirm);
+        getCommand("csconfirm").setTabCompleter(confirm);
 
         startStatistics();
         startUpdater();
@@ -201,6 +212,31 @@ public class ChestShop extends JavaPlugin {
         return true;
     }
 
+    /**
+     * Reads config.yml and local.yml again, without restarting the server.
+     *
+     * Options that only decide which listeners get registered - ALLOW_PARTIAL_TRANSACTIONS or
+     * TURN_OFF_HOPPER_PROTECTION, for instance - still need a restart to take effect. Everything
+     * the confirmation menu uses is read while the shop is being used, so that whole system can be
+     * turned on, off and retuned with this command.
+     *
+     * @return Was the configuration read without errors?
+     */
+    public static boolean reloadConfiguration() {
+        try {
+            Configuration.pairFileAndClass(loadFile("config.yml"), Properties.class);
+            Configuration.pairFileAndClass(loadFile("local.yml"), Messages.class);
+        } catch (Exception exception) {
+            logger.log(java.util.logging.Level.SEVERE, "Could not reload the configuration", exception);
+            return false;
+        }
+
+        // A menu that was opened under the old settings must not be accepted under the new ones
+        ConfirmationManager.cancelAll(Messages.CONFIRMATION_CANCELLED);
+
+        return true;
+    }
+
     public static File loadFile(String string) {
         File file = new File(dataFolder, string);
 
@@ -236,8 +272,13 @@ public class ChestShop extends JavaPlugin {
     }
 
     public void onDisable() {
+        // Close every open confirmation menu before the scheduler goes away, otherwise a player
+        // could be left staring at a menu whose accept button no longer does anything
+        ConfirmationManager.cancelAll(Messages.CONFIRMATION_CANCELLED);
+
         getServer().getScheduler().cancelTasks(this);
 
+        ConfirmationPreferences.unload();
         Toggle.clearToggledPlayers();
 
         if (handler != null) {
@@ -268,6 +309,8 @@ public class ChestShop extends JavaPlugin {
         registerEvent(new PlayerInventory());
         registerEvent(new PlayerLeave());
         registerEvent(new PlayerTeleport());
+
+        registerEvent(new ConfirmationListener());
 
         registerEvent(new ItemInfoListener());
         registerEvent(new GarbageTextListener());
@@ -321,6 +364,10 @@ public class ChestShop extends JavaPlugin {
         } else {
             registerEvent(new AmountAndPriceChecker());
         }
+
+        // Always registered - it decides at runtime whether it has anything to do, so that the
+        // confirmation menu can be turned on and off with /csreload
+        registerEvent(new ConfirmationModule());
 
         registerEvent(new InvalidNameIgnorer());
         registerEvent(new CreativeModeIgnorer());

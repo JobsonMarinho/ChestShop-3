@@ -173,4 +173,38 @@ public class Properties {
 
     @ConfigurationComment("Regexp that validates a player's name. If the name doesn't match, the player can neither create a shop nor buy/sell. For Bedrock (Floodgate) support include the prefix, e.g. \"^-?\\\\w+$\" allows names like -Claude.")
     public static String VALID_PLAYERNAME_REGEXP = "^-?\\w+$";
+
+    @PrecededBySpace
+    @ConfigurationComment("Do you want players to accept their purchases and sales in a menu before they happen?")
+    public static boolean CONFIRMATION_ENABLED = false;
+
+    @ConfigurationComment("Should the menu be shown to players who never changed the setting with /csconfirm?")
+    public static boolean CONFIRMATION_ENABLED_BY_DEFAULT = true;
+
+    @ConfigurationComment("Should transactions in Admin Shops ask for confirmation? (turning this off hides the menu there for everyone)")
+    public static boolean CONFIRMATION_FOR_ADMIN_SHOPS = true;
+
+    @ConfigurationComment("Should transactions in player shops ask for confirmation? (turning this off hides the menu there for everyone)")
+    public static boolean CONFIRMATION_FOR_PLAYER_SHOPS = true;
+
+    @ConfigurationComment("Should buying ask for confirmation?")
+    public static boolean CONFIRMATION_FOR_BUYING = true;
+
+    @ConfigurationComment("Should selling ask for confirmation?")
+    public static boolean CONFIRMATION_FOR_SELLING = true;
+
+    @ConfigurationComment("Can players turn the menu on and off for themselves with /csconfirm?")
+    public static boolean CONFIRMATION_ALLOW_PLAYER_TOGGLE = true;
+
+    @ConfigurationComment("(In seconds) How long does a player have to accept before the menu closes itself? (0 = no limit)")
+    public static int CONFIRMATION_TIMEOUT = 30;
+
+    @ConfigurationComment("(In blocks) How far can a player get from the shop before the pending transaction is dropped? (0 = no limit)")
+    public static double CONFIRMATION_MAX_DISTANCE = 10;
+
+    @ConfigurationComment("Item used for the accept buttons of the menu, written like on a shop sign")
+    public static String CONFIRMATION_ACCEPT_ITEM = "WOOL:5";
+
+    @ConfigurationComment("Item used for the decline buttons of the menu, written like on a shop sign")
+    public static String CONFIRMATION_DECLINE_ITEM = "WOOL:14";
 }

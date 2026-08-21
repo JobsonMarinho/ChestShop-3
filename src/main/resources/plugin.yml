@@ -24,6 +24,17 @@ commands:
   cstoggle:
     description: Toggle messages to the owner of a shop
     usage: /<command>
+  csconfirm:
+    aliases: [cconfirm]
+    description: Turns the buy/sell confirmation menu on or off for yourself
+    usage: |
+           /<command> §2(turns it on or off everywhere)
+           /<command> §7on§f§2/§7off§f §2(same, but explicit)
+           /<command> §7admin§f §7[on|off]§f §2(only for Admin Shops)
+           /<command> §7player§f §7[on|off]§f §2(only for player shops)
+  csreload:
+    description: Reloads ChestShop's configuration files
+    usage: /<command>
 
 permissions:
   ChestShop.*:
@@ -32,6 +43,7 @@ permissions:
     children:
         ChestShop.shop.*: true
         ChestShop.admin: true
+        ChestShop.reload: true
         ChestShop.shop.buy.playershop: true
         ChestShop.shop.buy.adminshop: true
         ChestShop.shop.sell.playershop: true
@@ -83,6 +95,15 @@ permissions:
   ChestShop.toggle:
     description: Allows user to toggle messages.
     default: true
+  ChestShop.confirmation.toggle:
+    description: Allows the user to turn the transaction confirmation menu on/off for themselves with /csconfirm
+    default: true
+  ChestShop.confirmation.bypass:
+    description: This user's transactions never ask for confirmation
+    default: false
+  ChestShop.reload:
+    description: Allows the user to reload ChestShop's configuration with /csreload
+    default: op
   ChestShop.admin:
     description: Allows user to modify/destroy other stores and create an Admin Shops
     default: op

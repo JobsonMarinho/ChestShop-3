@@ -36,6 +36,8 @@ public class PreTransactionEvent extends Event {
 
     private TransactionOutcome transactionOutcome = TRANSACTION_SUCCESFUL;
 
+    private boolean confirmationReplay = false;
+
     public PreTransactionEvent(Inventory ownerInventory, Inventory clientInventory, ItemStack[] items, double price, Player client, Account ownerAccount, Sign sign, TransactionType type) {
         this.ownerInventory = ownerInventory;
         this.clientInventory = (clientInventory == null ? client.getInventory() : clientInventory);
@@ -194,6 +196,26 @@ public class PreTransactionEvent extends Event {
         transactionOutcome = reason;
     }
 
+    /**
+     * Tells whether this event is the re-run of a transaction that the client has already accepted
+     * in the confirmation menu. Such a run has to go through every check again (the world may have
+     * changed while the menu was open), but must not open yet another confirmation menu.
+     *
+     * @return Is this a confirmation re-run?
+     */
+    public boolean isConfirmationReplay() {
+        return confirmationReplay;
+    }
+
+    /**
+     * Marks this event as the re-run of an already confirmed transaction
+     *
+     * @param confirmationReplay Is this a confirmation re-run?
+     */
+    public void setConfirmationReplay(boolean confirmationReplay) {
+        this.confirmationReplay = confirmationReplay;
+    }
+
     public HandlerList getHandlers() {
         return handlers;
     }
@@ -229,6 +251,8 @@ public class PreTransactionEvent extends Event {
         SPAM_CLICKING_PROTECTION,
         CREATIVE_MODE_PROTECTION,
         SHOP_IS_RESTRICTED,
+
+        AWAITING_CONFIRMATION, //The client still has to accept the transaction in the confirmation menu
 
         OTHER, //For plugin use!
 
