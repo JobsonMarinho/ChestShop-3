@@ -95,7 +95,7 @@ public class ConfirmationListener implements Listener {
 
         // The menu is only built for players who may change this, but the config can be reloaded
         // while it is open, so the permission is checked again on the click that acts on it
-        if (!Properties.CONFIRMATION_ALLOW_PLAYER_TOGGLE || !Permission.has(player, Permission.CONFIRMATION_TOGGLE)) {
+        if (!ConfirmationManager.canChangePreferences(player)) {
             player.sendMessage(Messages.prefix(Messages.CONFIRMATION_TOGGLE_BLOCKED));
             return;
         }

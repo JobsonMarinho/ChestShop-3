@@ -172,11 +172,16 @@ public class ConfirmationMenu implements MenuHolder {
      */
     private static int resolveExtraSlot(Player viewer, int configured, String what, int accept, int decline, int item, int other) {
         if (!ConfirmationManager.canChangePreferences(viewer)) {
-            return -1; //Nothing for this player to change
+            // A button that vanishes without a word is a bad way to find out about a setting
+            warnAboutLayout("Hiding the confirmation menu's \"" + what + "\" button: "
+                    + (Properties.CONFIRMATION_ALLOW_PLAYER_TOGGLE
+                            ? "ChestShop.confirmation.toggle is denied for " + viewer.getName()
+                            : "CONFIRMATION_ALLOW_PLAYER_TOGGLE is turned off"));
+            return -1;
         }
 
         if (configured < 0 || configured >= MENU_SIZE) {
-            return -1; //Deliberately hidden
+            return -1; //Deliberately hidden with a negative slot
         }
 
         if (configured == accept || configured == decline || configured == item || configured == other) {

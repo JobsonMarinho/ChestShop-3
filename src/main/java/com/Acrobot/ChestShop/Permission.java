@@ -67,6 +67,22 @@ public enum Permission {
         return has(player, OTHER_NAME + "." + name) || has(player, OTHER_NAME + "." + name.toLowerCase(Locale.ROOT));
     }
 
+    /**
+     * Was this node explicitly taken away from the sender?
+     *
+     * Different from {@code !has(...)}: a node nobody ever mentioned is not denied, it is just
+     * undecided, and a node declared with {@code default: true} is meant to be held by everyone.
+     * Use this for permissions that grant something by default, so that a server whose permission
+     * plugin doesn't hand out plugin.yml defaults doesn't silently take it from everyone.
+     *
+     * @param sender     Sender to check
+     * @param permission Permission to check
+     * @return Is the permission set, and set to false?
+     */
+    public static boolean isDenied(CommandSender sender, Permission permission) {
+        return hasPermissionSetFalse(sender, permission.permission);
+    }
+
     private static boolean hasPermissionSetFalse(CommandSender sender, String permission) {
         return (sender.isPermissionSet(permission) && !sender.hasPermission(permission))
                 || (sender.isPermissionSet(permission.toLowerCase(Locale.ROOT)) && !sender.hasPermission(permission.toLowerCase(Locale.ROOT)));

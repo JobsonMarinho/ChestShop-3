@@ -1,6 +1,7 @@
 package com.Acrobot.ChestShop.Commands;
 
 import com.Acrobot.ChestShop.Confirmation.ConfirmationPreferences;
+import com.Acrobot.ChestShop.Confirmation.ConfirmationManager;
 import com.Acrobot.ChestShop.Configuration.Messages;
 import com.Acrobot.ChestShop.Configuration.Properties;
 import com.Acrobot.ChestShop.Permission;
@@ -39,7 +40,7 @@ public class Confirm implements CommandExecutor, TabCompleter {
             return true;
         }
 
-        if (!Properties.CONFIRMATION_ALLOW_PLAYER_TOGGLE || !Permission.has(player, Permission.CONFIRMATION_TOGGLE)) {
+        if (!ConfirmationManager.canChangePreferences(player)) {
             player.sendMessage(Messages.prefix(Messages.CONFIRMATION_TOGGLE_BLOCKED));
             return true;
         }

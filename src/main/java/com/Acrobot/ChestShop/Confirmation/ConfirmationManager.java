@@ -169,11 +169,20 @@ public class ConfirmationManager {
     }
 
     /**
+     * Is there anything in the settings this player is allowed to change?
+     *
+     * ChestShop.confirmation.toggle is declared with {@code default: true} - deciding whether you
+     * want to be asked before your own purchases is not a privilege. Asking for the node outright
+     * would hide the buttons from every ordinary player on a server whose permission plugin doesn't
+     * pass plugin.yml defaults through, and that failure is invisible: no error, just a menu that
+     * quietly lost two buttons. So the node is treated as what it is - something everyone holds
+     * until an admin explicitly takes it away.
+     *
      * @param player Player to check
-     * @return Is there anything in the settings this player is allowed to change?
+     * @return Can this player change their own confirmation settings?
      */
     public static boolean canChangePreferences(Player player) {
-        return Properties.CONFIRMATION_ALLOW_PLAYER_TOGGLE && Permission.has(player, Permission.CONFIRMATION_TOGGLE);
+        return Properties.CONFIRMATION_ALLOW_PLAYER_TOGGLE && !Permission.isDenied(player, Permission.CONFIRMATION_TOGGLE);
     }
 
     /**
