@@ -272,7 +272,8 @@ public class ConfirmationManager {
      * @param menuOffer The offer the clicked menu was built for
      */
     public static void openPreferences(Player player, PendingConfirmation menuOffer) {
-        if (PENDING.get(player.getUniqueId()) != menuOffer) {
+        // A null offer means the settings were opened on their own, with no transaction behind them
+        if (menuOffer != null && PENDING.get(player.getUniqueId()) != menuOffer) {
             return;
         }
 

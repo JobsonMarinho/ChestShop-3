@@ -84,7 +84,11 @@ public class ConfirmationListener implements Listener {
 
     private static void onPreferencesClick(Player player, PreferencesMenu menu, int slot) {
         if (menu.isBackSlot(slot)) {
-            ConfirmationManager.returnToConfirmation(player, menu.getPending());
+            if (menu.getPending() != null) {
+                ConfirmationManager.returnToConfirmation(player, menu.getPending());
+            } else {
+                player.closeInventory(); //Opened on its own, so there is nowhere to go back to
+            }
             return;
         }
 

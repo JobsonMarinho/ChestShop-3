@@ -5,6 +5,7 @@ import com.Acrobot.ChestShop.Commands.Confirm;
 import com.Acrobot.ChestShop.Commands.Give;
 import com.Acrobot.ChestShop.Commands.ItemInfo;
 import com.Acrobot.ChestShop.Commands.Reload;
+import com.Acrobot.ChestShop.Commands.SettingsMenu;
 import com.Acrobot.ChestShop.Commands.Toggle;
 import com.Acrobot.ChestShop.Commands.Version;
 import com.Acrobot.ChestShop.Confirmation.BedrockForms;
@@ -135,6 +136,7 @@ public class ChestShop extends JavaPlugin {
         getCommand("csGive").setExecutor(new Give());
         getCommand("cstoggle").setExecutor(new Toggle());
         getCommand("csreload").setExecutor(new Reload());
+        getCommand("lojamenu").setExecutor(new SettingsMenu());
 
         Confirm confirm = new Confirm();
         getCommand("csconfirm").setExecutor(confirm);

@@ -32,6 +32,10 @@ commands:
            /<command> §7on§f§2/§7off§f §2(same, but explicit)
            /<command> §7admin§f §7[on|off]§f §2(only for Admin Shops)
            /<command> §7player§f §7[on|off]§f §2(only for player shops)
+  lojamenu:
+    aliases: [csmenu]
+    description: Opens your buy/sell confirmation settings
+    usage: /<command>
   csreload:
     description: Reloads ChestShop's configuration files
     usage: /<command>

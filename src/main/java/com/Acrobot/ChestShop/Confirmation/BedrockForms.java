@@ -218,7 +218,9 @@ public class BedrockForms {
             builder = builderContent.invoke(builder, firstLine(Messages.CONFIRMATION_SETTINGS_LORE));
             builder = builderButton.invoke(builder, toggleLabel(player, true));
             builder = builderButton.invoke(builder, toggleLabel(player, false));
-            builder = builderButton.invoke(builder, plain(Messages.CONFIRMATION_BACK_NAME));
+            builder = builderButton.invoke(builder, plain(pending != null
+                    ? Messages.CONFIRMATION_BACK_NAME
+                    : Messages.CONFIRMATION_CLOSE_NAME));
 
             builder = builderValidHandler.invoke(builder, new Consumer<Object>() {
                 public void accept(Object response) {
@@ -231,7 +233,11 @@ public class BedrockForms {
                             }
 
                             if (button == 2) {
-                                ConfirmationManager.returnToConfirmation(player, pending);
+                                // Answering a form already closed it, so with no offer behind us
+                                // there is nothing left to do
+                                if (pending != null) {
+                                    ConfirmationManager.returnToConfirmation(player, pending);
+                                }
                                 return;
                             }
 
@@ -276,6 +282,10 @@ public class BedrockForms {
     private static boolean stillWaiting(Player player, PendingConfirmation pending) {
         if (!player.isOnline()) {
             return false;
+        }
+
+        if (pending == null) {
+            return true; //Settings opened on their own - there is no offer that could run out
         }
 
         if (ConfirmationManager.getPending(player) != pending) {

@@ -139,6 +139,10 @@ public class Messages {
     public static List<String> CONFIRMATION_BACK_LORE = Arrays.asList(
             "&7Para a confirmação da transação",
             "&eClique para voltar");
+    public static String CONFIRMATION_CLOSE_NAME = "&cFechar";
+    public static List<String> CONFIRMATION_CLOSE_LORE = Arrays.asList(
+            "&7Suas escolhas já estão salvas.",
+            "&eClique para fechar");
 
     @PrecededBySpace
     public static String CONFIRMATION_CANCELLED = "&cTransação cancelada.";

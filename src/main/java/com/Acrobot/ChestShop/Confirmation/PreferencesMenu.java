@@ -18,11 +18,12 @@ import java.util.UUID;
  * <pre>
  *   . . . . . . . . .
  *   . . A . . . P . .     A - Admin Shops, P - player shops
- *   . . . . B . . . .     B - back to the offer the player came from
+ *   . . . . B . . . .     B - back to the offer, or close when opened on its own
  * </pre>
  *
- * This is the same thing /csconfirm does, reachable without leaving the menu. It always belongs to
- * one pending offer: the player got here from a transaction and goes back to it.
+ * This is the same thing /csconfirm does, in a menu. It is reached either from a pending offer -
+ * and then goes back to it - or straight from /lojamenu, in which case there is no offer and the
+ * bottom button just closes.
  *
  * @author Acrobot
  */
@@ -40,6 +41,10 @@ public class PreferencesMenu implements MenuHolder {
     private final PendingConfirmation pending;
     private final Inventory inventory;
 
+    /**
+     * @param viewer  Player the menu is for
+     * @param pending Offer they came from, or null when the menu was opened on its own
+     */
     public PreferencesMenu(Player viewer, PendingConfirmation pending) {
         this.viewerId = viewer.getUniqueId();
         this.pending = pending;
@@ -57,8 +62,13 @@ public class PreferencesMenu implements MenuHolder {
     public void refresh(Player viewer) {
         inventory.setItem(ADMIN_SHOPS_SLOT, createToggle(viewer, true));
         inventory.setItem(PLAYER_SHOPS_SLOT, createToggle(viewer, false));
-        inventory.setItem(BACK_SLOT, MenuButtons.create(Properties.CONFIRMATION_BACK_ITEM, Material.ARROW, (short) 0,
-                Messages.CONFIRMATION_BACK_NAME, Messages.CONFIRMATION_BACK_LORE));
+
+        // Going back and closing are different things, and the button says which one it is
+        inventory.setItem(BACK_SLOT, pending != null
+                ? MenuButtons.create(Properties.CONFIRMATION_BACK_ITEM, Material.ARROW, (short) 0,
+                        Messages.CONFIRMATION_BACK_NAME, Messages.CONFIRMATION_BACK_LORE)
+                : MenuButtons.create(Properties.CONFIRMATION_CLOSE_ITEM, Material.BARRIER, (short) 0,
+                        Messages.CONFIRMATION_CLOSE_NAME, Messages.CONFIRMATION_CLOSE_LORE));
     }
 
     public Inventory getInventory() {

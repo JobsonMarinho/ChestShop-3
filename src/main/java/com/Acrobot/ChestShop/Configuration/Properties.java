@@ -232,6 +232,9 @@ public class Properties {
     @ConfigurationComment("Item used for the back button of the settings menu, written like on a shop sign")
     public static String CONFIRMATION_BACK_ITEM = "ARROW";
 
+    @ConfigurationComment("Item used for the close button, shown instead of the back button when the settings menu is opened with /lojamenu")
+    public static String CONFIRMATION_CLOSE_ITEM = "BARRIER";
+
     @ConfigurationComment("Should Bedrock players get a native form instead of the chest menu? (needs Floodgate; without it they get the chest menu through Geyser)")
     public static boolean CONFIRMATION_BEDROCK_FORMS = true;
 }
