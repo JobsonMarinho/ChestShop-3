@@ -75,8 +75,6 @@ public class ConfirmationListener implements Listener {
             ConfirmationManager.accept(player, menu.getPending());
         } else if (menu.isDeclineSlot(slot)) {
             ConfirmationManager.decline(player, menu.getPending());
-        } else if (menu.isDismissSlot(slot)) {
-            ConfirmationManager.acceptAndStopAsking(player, menu.getPending());
         } else if (menu.isSettingsSlot(slot)) {
             ConfirmationManager.openPreferences(player, menu.getPending());
         }
@@ -111,6 +109,11 @@ public class ConfirmationListener implements Listener {
         boolean enabled = !ConfirmationPreferences.wantsConfirmation(player, adminShop);
         ConfirmationPreferences.setConfirmation(player, adminShop, enabled);
 
+        if (!enabled) {
+            // Told once they leave the menu, where the chat is actually readable
+            ConfirmationManager.rememberTurnedOff(player);
+        }
+
         // Redrawn in place: reopening would fire a close event and drop the offer still waiting
         menu.refresh(player);
         player.updateInventory();
@@ -139,6 +142,10 @@ public class ConfirmationListener implements Listener {
         // other; only a close that really ends the visit drops the offer
         if (!ConfirmationManager.isSwitchingMenus(player)) {
             ConfirmationManager.cancel(player, Messages.CONFIRMATION_CANCELLED);
+        }
+
+        if (menu instanceof PreferencesMenu) {
+            ConfirmationManager.sendTurnedOffHint(player);
         }
 
         // A menu item can only enter a real inventory through one of these menus, so sweeping when

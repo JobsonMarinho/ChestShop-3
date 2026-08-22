@@ -125,16 +125,11 @@ public class Messages {
             "&eClique para desligar");
     public static List<String> CONFIRMATION_SETTINGS_OFF_LORE = Arrays.asList(
             "&7A transação acontece na hora, sem perguntar.",
+            "&8Para religar depois, use /lojamenu.",
             "&eClique para ligar");
     public static List<String> CONFIRMATION_SETTINGS_FORCED_OFF_LORE = Arrays.asList(
             "&7A confirmação está desligada no servidor.",
             "&8Você não pode mudar isso aqui.");
-    public static String CONFIRMATION_DISMISS_NAME = "&aNão perguntar de novo";
-    public static List<String> CONFIRMATION_DISMISS_LORE = Arrays.asList(
-            "&7Conclui esta transação e desliga a",
-            "&7confirmação para &a%shops&7.",
-            "&8Para religar use /csconfirm.",
-            "&eClique para confirmar e desligar");
     public static String CONFIRMATION_BACK_NAME = "&aVoltar";
     public static List<String> CONFIRMATION_BACK_LORE = Arrays.asList(
             "&7Para a confirmação da transação",
@@ -143,6 +138,10 @@ public class Messages {
     public static List<String> CONFIRMATION_CLOSE_LORE = Arrays.asList(
             "&7Suas escolhas já estão salvas.",
             "&eClique para fechar");
+
+    @PrecededBySpace
+    public static String CONFIRMATION_DISABLED_HINT = "&7Você desligou a confirmação para &c%shops&7.";
+    public static String CONFIRMATION_DISABLED_HINT_COMMAND = "&7Para ligar de novo, use &a/lojamenu&7 e clique na opção.";
 
     @PrecededBySpace
     public static String CONFIRMATION_CANCELLED = "&cTransação cancelada.";

@@ -109,7 +109,7 @@ public class BedrockForms {
 
     /** What a button of the confirmation form does, in the order the buttons were added */
     private enum FormAction {
-        ACCEPT, DECLINE, STOP_ASKING, SETTINGS
+        ACCEPT, DECLINE, SETTINGS
     }
 
     /**
@@ -144,9 +144,6 @@ public class BedrockForms {
             actions.add(FormAction.DECLINE);
 
             if (withExtras) {
-                builder = builderButton.invoke(builder, plain(Messages.CONFIRMATION_DISMISS_NAME));
-                actions.add(FormAction.STOP_ASKING);
-
                 builder = builderButton.invoke(builder, plain(Messages.CONFIRMATION_SETTINGS_NAME));
                 actions.add(FormAction.SETTINGS);
             }
@@ -167,9 +164,6 @@ public class BedrockForms {
                                     break;
                                 case DECLINE:
                                     ConfirmationManager.decline(player, pending);
-                                    break;
-                                case STOP_ASKING:
-                                    ConfirmationManager.acceptAndStopAsking(player, pending);
                                     break;
                                 case SETTINGS:
                                     ConfirmationManager.openPreferences(player, pending);
@@ -233,6 +227,8 @@ public class BedrockForms {
                             }
 
                             if (button == 2) {
+                                ConfirmationManager.sendTurnedOffHint(player);
+
                                 // Answering a form already closed it, so with no offer behind us
                                 // there is nothing left to do
                                 if (pending != null) {
@@ -243,8 +239,13 @@ public class BedrockForms {
 
                             boolean adminShop = button == 0;
                             if (PreferencesMenu.isChangeable(adminShop)) {
-                                ConfirmationPreferences.setConfirmation(player, adminShop,
-                                        !ConfirmationPreferences.wantsConfirmation(player, adminShop));
+                                boolean enabled = !ConfirmationPreferences.wantsConfirmation(player, adminShop);
+
+                                ConfirmationPreferences.setConfirmation(player, adminShop, enabled);
+
+                                if (!enabled) {
+                                    ConfirmationManager.rememberTurnedOff(player);
+                                }
                             }
 
                             // Redrawing a form means sending it again
@@ -258,6 +259,7 @@ public class BedrockForms {
                 public void run() {
                     runOnMainThread(new Runnable() {
                         public void run() {
+                            ConfirmationManager.sendTurnedOffHint(player);
                             ConfirmationManager.cancel(player, Messages.CONFIRMATION_CANCELLED);
                         }
                     });

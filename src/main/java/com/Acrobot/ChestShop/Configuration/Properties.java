@@ -223,12 +223,6 @@ public class Properties {
     @ConfigurationComment("Item used for the settings button, written like on a shop sign")
     public static String CONFIRMATION_SETTINGS_ITEM = "REDSTONE_COMPARATOR";
 
-    @ConfigurationComment("Slot (0-26) of the \"don't ask me again\" button, which goes through with the transaction and turns the menu off for that kind of shop. Set it to -1 to hide the button.")
-    public static int CONFIRMATION_DISMISS_SLOT = 22;
-
-    @ConfigurationComment("Item used for the \"don't ask me again\" button, written like on a shop sign")
-    public static String CONFIRMATION_DISMISS_ITEM = "LEVER";
-
     @ConfigurationComment("Item used for the back button of the settings menu, written like on a shop sign")
     public static String CONFIRMATION_BACK_ITEM = "ARROW";
 

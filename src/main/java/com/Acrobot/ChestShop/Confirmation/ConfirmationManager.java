@@ -77,6 +77,13 @@ public class ConfirmationManager {
     private static final Set<UUID> SWITCHING_MENUS = new HashSet<UUID>();
 
     /**
+     * Players who turned a confirmation off while in the settings and haven't been told how to turn
+     * it back on yet. Kept until they leave the menu, so the explanation lands on a chat they can
+     * actually read rather than behind an open inventory.
+     */
+    private static final Set<UUID> TURNED_OFF_IN_MENU = new HashSet<UUID>();
+
+    /**
      * Should this transaction be shown to the client for confirmation first?
      *
      * @param event Transaction that is about to happen
@@ -194,6 +201,46 @@ public class ConfirmationManager {
     }
 
     /**
+     * Notes that this player just turned a confirmation off, so they can be told how to undo it
+     * once they leave the settings.
+     *
+     * @param player Player who turned it off
+     */
+    public static void rememberTurnedOff(Player player) {
+        TURNED_OFF_IN_MENU.add(player.getUniqueId());
+    }
+
+    /**
+     * Explains how to turn the confirmation back on, if the player turned one off and left it off.
+     *
+     * Somebody who switches it off has no reason to know the setting still exists, let alone which
+     * command reaches it - so the way back is spelled out once, right when they walk away, rather
+     * than left for them to discover.
+     *
+     * @param player Player who is leaving the settings
+     */
+    public static void sendTurnedOffHint(Player player) {
+        if (!TURNED_OFF_IN_MENU.remove(player.getUniqueId()) || !player.isOnline()) {
+            return;
+        }
+
+        List<String> disabled = new ArrayList<String>();
+        if (PreferencesMenu.isChangeable(true) && !ConfirmationPreferences.wantsConfirmation(player, true)) {
+            disabled.add(Messages.CONFIRMATION_SETTINGS_ADMIN_SHOPS);
+        }
+        if (PreferencesMenu.isChangeable(false) && !ConfirmationPreferences.wantsConfirmation(player, false)) {
+            disabled.add(Messages.CONFIRMATION_SETTINGS_PLAYER_SHOPS);
+        }
+
+        if (disabled.isEmpty()) {
+            return; //Turned it off and back on again before leaving
+        }
+
+        player.sendMessage(Messages.prefix(Messages.CONFIRMATION_DISABLED_HINT.replace("%shops", String.join(", ", disabled))));
+        player.sendMessage(Messages.prefix(Messages.CONFIRMATION_DISABLED_HINT_COMMAND));
+    }
+
+    /**
      * The client clicked the accept button: rebuild the transaction from scratch and, if it is
      * still exactly the one they were shown, run it.
      *
@@ -220,33 +267,6 @@ public class ConfirmationManager {
                 process(player, pending);
             }
         });
-    }
-
-    /**
-     * The client clicked "don't ask me again": go through with this transaction and stop asking
-     * about this kind of shop.
-     *
-     * Turning it off first means that if the player is on their last click of the day, the setting
-     * still sticks even when the transaction itself turns out to be impossible.
-     *
-     * @param player    Client of the shop
-     * @param menuOffer The offer the clicked menu was built for
-     */
-    public static void acceptAndStopAsking(Player player, PendingConfirmation menuOffer) {
-        if (PENDING.get(player.getUniqueId()) != menuOffer) {
-            return;
-        }
-
-        if (canChangePreferences(player)) {
-            boolean adminShop = menuOffer.isAdminShop();
-
-            ConfirmationPreferences.setConfirmation(player, adminShop, false);
-            player.sendMessage(Messages.prefix(adminShop
-                    ? Messages.CONFIRMATION_ADMIN_SHOPS_OFF
-                    : Messages.CONFIRMATION_PLAYER_SHOPS_OFF));
-        }
-
-        accept(player, menuOffer);
     }
 
     /**
@@ -353,6 +373,12 @@ public class ConfirmationManager {
      */
     public static void discard(Player player) {
         take(player);
+
+        if (player != null) {
+            // Safe to drop here: by the time an offer is discarded the hint has either been sent
+            // (the settings were closed) or the player is gone
+            TURNED_OFF_IN_MENU.remove(player.getUniqueId());
+        }
     }
 
     /**
