@@ -1,0 +1,469 @@
+# ============================================================================
+#  ChestShop - Auditoria no Discord
+# ============================================================================
+#
+#  Como funciona, em uma olhada:
+#
+#    evento no jogo -> anti-flood/agregador -> fila -> envio assíncrono
+#
+#  Nada aqui pode atrapalhar uma compra: se a URL estiver errada, se o Discord
+#  cair ou se um template tiver erro de digitação, a transação acontece do
+#  mesmo jeito e a falha vai para plugins/ChestShop/logs/discord.log.
+#
+#  Depois de editar este arquivo use /csreload - não precisa reiniciar.
+# ============================================================================
+
+discord:
+  # Chave geral. Com false, nada é enviado e nenhum recurso é usado.
+  enabled: false
+
+  # Nome que aparece como autor da mensagem no Discord.
+  username: "ChestShop"
+
+  # Transações a partir deste valor também disparam "transaction-high-value".
+  high-value-threshold: 100000
+
+  # --------------------------------------------------------------------------
+  # DESTINOS
+  # --------------------------------------------------------------------------
+  # Cada destino é um canal/webhook diferente. Manter separados permite silenciar
+  # o fluxo de transações sem perder os alertas de exploit.
+  #
+  # Para pegar a URL: Discord -> Editar canal -> Integrações -> Webhooks.
+  # --------------------------------------------------------------------------
+  webhooks:
+    # Compras, vendas, resumos e valores altos.
+    economy:
+      enabled: false
+      url: "COLOQUE_A_WEBHOOK_DE_ECONOMIA_AQUI"
+
+    # Criação, destruição e edição de lojas de jogadores.
+    shops:
+      enabled: false
+      url: "COLOQUE_A_WEBHOOK_DE_LOJAS_AQUI"
+
+    # Lojas do servidor (Admin Shop) e ações da equipe.
+    staff:
+      enabled: false
+      url: "COLOQUE_A_WEBHOOK_DA_STAFF_AQUI"
+
+    # Anti-dupe, ofertas alteradas e tentativas sem permissão.
+    security:
+      enabled: false
+      url: "COLOQUE_A_WEBHOOK_DE_SEGURANCA_AQUI"
+
+    # Erros de economia e falhas técnicas.
+    technical:
+      enabled: false
+      url: "COLOQUE_A_WEBHOOK_TECNICA_AQUI"
+
+  # --------------------------------------------------------------------------
+  # AGREGAÇÃO DE TRANSAÇÕES
+  # --------------------------------------------------------------------------
+  # O problema: um jogador comprando 40 vezes em dois minutos viraria 40
+  # mensagens. Limitar por tempo resolveria o flood jogando fora justamente o
+  # que você queria auditar.
+  #
+  # A solução: as primeiras transações saem uma a uma (quem compra um item
+  # aparece na hora). Quando o jogador passa desse número, ele é tratado como
+  # estando numa "rajada" e o resto é juntado em UMA mensagem detalhada, com
+  # todas as linhas e os totais. Nenhuma transação é perdida.
+  #
+  # O lote é enviado quando acontecer o que vier primeiro:
+  #   - o jogador ficar parado por "idle-seconds";
+  #   - o lote passar de "max-entries" linhas;
+  #   - o lote atingir "max-window-seconds" de vida;
+  #   - o jogador sair do servidor;
+  #   - o servidor desligar.
+  # --------------------------------------------------------------------------
+  aggregation:
+    enabled: true
+
+    # Quantas transações saem individualmente antes de começar a juntar.
+    # Use 1 para juntar sempre; 0 desliga as mensagens individuais.
+    aggregate-after: 3
+
+    # Segundos sem comprar/vender que fecham o lote e encerram a rajada.
+    idle-seconds: 30
+
+    # Teto: um lote nunca fica guardado mais que isso, por mais que o jogador
+    # continue comprando sem parar.
+    max-window-seconds: 300
+
+    # Máximo de linhas listadas em um lote. O que passar disso continua sendo
+    # contado nos totais e aparece como "e mais N transação(ões)".
+    max-entries: 60
+
+    # Limite de caracteres da descrição do embed (o Discord corta em 4096).
+    max-description-length: 3800
+
+    # Formato de cada linha do lote.
+    # Use: {time} {type} {amount} {item} {price} {shop} {location}
+    entry-format: "`{time}` {type} **{amount}x** {item} — {price} — {shop}"
+    buy-word: "Comprou"
+    sell-word: "Vendeu"
+
+  # --------------------------------------------------------------------------
+  # ANTI-FLOOD (para os eventos que NÃO são transações)
+  # --------------------------------------------------------------------------
+  # Transações têm o agregador acima. Isto aqui segura o resto: cliques negados
+  # em sequência, alguém quebrando uma fileira de lojas, e afins.
+  # --------------------------------------------------------------------------
+  anti-flood:
+    # Fila: as mensagens são acumuladas e enviadas em bloco, fora da thread
+    # principal. Desligar faz cada evento abrir sua própria conexão.
+    queue-enabled: true
+    queue-max-size: 200
+    flush-interval-seconds: 5
+
+    # Intervalo mínimo entre dois envios do MESMO evento (0 = sem limite).
+    per-event-enabled: true
+    per-event-cooldown-seconds: 0
+
+    # Intervalo mínimo entre dois envios do mesmo evento PELO MESMO jogador.
+    per-player-enabled: true
+    per-player-cooldown-seconds: 5
+
+    # Eventos HIGH/CRITICAL furam o anti-flood. Um erro de banco que apanha do
+    # limitador é um erro que ninguém fica sabendo.
+    ignore-anti-flood-for-critical: true
+
+  settings:
+    timeout-ms: 5000
+    retry-on-fail: true
+    # 429 e 5xx são retentados; outros 4xx não (é erro nosso, repetir não muda).
+    max-retries: 2
+
+  # --------------------------------------------------------------------------
+  # EVENTOS
+  # --------------------------------------------------------------------------
+  # Cada evento tem: enabled, webhook (destino), priority, mention-role-id
+  # (vazio = sem ping) e o template do embed.
+  #
+  # Placeholders disponíveis em todos: {player} {uuid} {avatar} {body}
+  # Um placeholder inexistente vira "—", nunca aparece {texto} cru.
+  #
+  # Cores (decimal): verde 5763719 · azul 3447003 · amarelo 16705372
+  #                  laranja 15105570 · vermelho 15548997 · roxo 10181046
+  # --------------------------------------------------------------------------
+  events:
+
+    # === ECONOMIA ==========================================================
+
+    # Compra individual (as primeiras da rajada; o resto vai no resumo).
+    # Placeholders: {item} {amount} {price} {unit_price} {owner} {shop_type}
+    #               {world} {x} {y} {z} {location}
+    transaction-buy:
+      enabled: true
+      webhook: "economy"
+      priority: "LOW"
+      mention-role-id: ""
+      title: "🛒 Compra"
+      description: |-
+        **Jogador:** {player}
+        **Item:** {amount}x {item}
+        **Valor:** {price} _(unidade: {unit_price})_
+        **Loja:** {owner} · {shop_type}
+        **Local:** `{location}`
+      color: 5763719
+      thumbnail: "{avatar}"
+      footer: "ChestShop • Compra"
+
+    # Venda individual.
+    transaction-sell:
+      enabled: true
+      webhook: "economy"
+      priority: "LOW"
+      mention-role-id: ""
+      title: "💰 Venda"
+      description: |-
+        **Jogador:** {player}
+        **Item:** {amount}x {item}
+        **Valor:** {price} _(unidade: {unit_price})_
+        **Loja:** {owner} · {shop_type}
+        **Local:** `{location}`
+      color: 3447003
+      thumbnail: "{avatar}"
+      footer: "ChestShop • Venda"
+
+    # O lote da rajada. Este é o evento que evita o flood.
+    # Placeholders: {buys} {sells} {total} {spent} {earned} {net}
+    #               {from} {to} {duration} {entries} {not_listed}
+    transaction-summary:
+      enabled: true
+      webhook: "economy"
+      priority: "MEDIUM"
+      mention-role-id: ""
+      title: "📊 Resumo de {player}"
+      description: |-
+        **Período:** {from} → {to} _({duration})_
+        **Movimento:** {buys} compra(s) · {sells} venda(s)
+        **Gastou:** {spent} · **Recebeu:** {earned}
+        **Saldo:** {net}
+
+        {entries}
+      color: 10181046
+      thumbnail: "{avatar}"
+      footer: "ChestShop • Resumo de transações"
+
+    # Transação acima de high-value-threshold.
+    transaction-high-value:
+      enabled: true
+      webhook: "economy"
+      priority: "HIGH"
+      mention-role-id: ""
+      title: "💎 Transação de alto valor"
+      description: |-
+        **Jogador:** {player}
+        **Operação:** {type}
+        **Item:** {amount}x {item}
+        **Valor:** {price}
+        **Loja:** {owner} · {shop_type}
+        **Local:** `{location}`
+      color: 16705372
+      thumbnail: "{avatar}"
+      footer: "ChestShop • Alto valor"
+
+    # Taxa cobrada ao criar uma loja. Desligado por padrão: é barulhento.
+    shop-creation-fee:
+      enabled: false
+      webhook: "economy"
+      priority: "LOW"
+      mention-role-id: ""
+      title: "🧾 Taxa de criação"
+      description: |-
+        **Jogador:** {player}
+        **Valor cobrado:** {price}
+      color: 16705372
+      thumbnail: "{avatar}"
+      footer: "ChestShop • Taxa"
+
+    # Reembolso ao destruir uma loja.
+    shop-refund:
+      enabled: false
+      webhook: "economy"
+      priority: "LOW"
+      mention-role-id: ""
+      title: "↩️ Reembolso de loja"
+      description: |-
+        **Jogador:** {player}
+        **Valor devolvido:** {price}
+      color: 16705372
+      thumbnail: "{avatar}"
+      footer: "ChestShop • Reembolso"
+
+    # === LOJAS =============================================================
+
+    # Placeholders de placa: {sign1} dono · {sign2} quantidade
+    #                        {sign3} preço · {sign4} item
+    shop-created:
+      enabled: true
+      webhook: "shops"
+      priority: "MEDIUM"
+      mention-role-id: ""
+      title: "🏪 Loja criada"
+      description: |-
+        **Dono:** {player}
+        **Item:** {sign2}x {sign4}
+        **Preço:** {sign3}
+        **Local:** `{location}`
+      color: 5763719
+      thumbnail: "{avatar}"
+      footer: "ChestShop • Loja criada"
+
+    shop-destroyed:
+      enabled: true
+      webhook: "shops"
+      priority: "MEDIUM"
+      mention-role-id: ""
+      title: "🧱 Loja destruída"
+      description: |-
+        **Dono:** {player}
+        **Item:** {sign2}x {sign4}
+        **Preço:** {sign3}
+        **Local:** `{location}`
+      color: 15548997
+      thumbnail: "{avatar}"
+      footer: "ChestShop • Loja destruída"
+
+    # Placa editada - normalmente mudança de preço. Vale auditar.
+    shop-edited:
+      enabled: true
+      webhook: "shops"
+      priority: "MEDIUM"
+      mention-role-id: ""
+      title: "✏️ Loja editada"
+      description: |-
+        **Jogador:** {player}
+        **Placa agora:** {sign1} · {sign2} · {sign3} · {sign4}
+        **Local:** `{location}`
+      color: 16705372
+      thumbnail: "{avatar}"
+      footer: "ChestShop • Loja editada"
+
+    # Loja removida pelo próprio plugin por ter ficado sem estoque
+    # (opção REMOVE_EMPTY_SHOPS do config.yml). Não tem jogador envolvido.
+    shop-emptied:
+      enabled: true
+      webhook: "shops"
+      priority: "LOW"
+      mention-role-id: ""
+      title: "📭 Loja removida (vazia)"
+      description: |-
+        **Dono:** {owner}
+        **Item:** {sign2}x {sign4}
+        **Local:** `{location}`
+      color: 16705372
+      thumbnail: ""
+      footer: "ChestShop • Loja vazia removida"
+
+    # === STAFF =============================================================
+
+    admin-shop-created:
+      enabled: true
+      webhook: "staff"
+      priority: "HIGH"
+      mention-role-id: ""
+      title: "🛡️ Loja do servidor criada"
+      description: |-
+        **Criada por:** {player}
+        **Item:** {sign2}x {sign4}
+        **Preço:** {sign3}
+        **Local:** `{location}`
+      color: 15105570
+      thumbnail: "{avatar}"
+      footer: "ChestShop • Admin Shop"
+
+    admin-shop-destroyed:
+      enabled: true
+      webhook: "staff"
+      priority: "HIGH"
+      mention-role-id: ""
+      title: "🛡️ Loja do servidor destruída"
+      description: |-
+        **Destruída por:** {player}
+        **Item:** {sign2}x {sign4}
+        **Preço:** {sign3}
+        **Local:** `{location}`
+      color: 15548997
+      thumbnail: "{avatar}"
+      footer: "ChestShop • Admin Shop"
+
+    # Alguém da equipe destruiu a loja de OUTRO jogador.
+    shop-destroyed-by-staff:
+      enabled: true
+      webhook: "staff"
+      priority: "HIGH"
+      mention-role-id: ""
+      title: "⚠️ Loja de jogador destruída pela equipe"
+      description: |-
+        **Destruída por:** {player}
+        **Dono da loja:** {owner}
+        **Item:** {sign2}x {sign4}
+        **Local:** `{location}`
+      color: 15105570
+      thumbnail: "{avatar}"
+      footer: "ChestShop • Ação da equipe"
+
+    # /csreload e /csgive.
+    # Placeholders: {admin} {command} {details}
+    staff-command:
+      enabled: true
+      webhook: "staff"
+      priority: "HIGH"
+      mention-role-id: ""
+      title: "🔧 Comando da equipe"
+      description: |-
+        **Executado por:** {admin}
+        **Comando:** `{command}`
+        **Detalhes:** {details}
+      color: 15105570
+      thumbnail: "{avatar}"
+      footer: "ChestShop • Comando"
+
+    # === SEGURANÇA =========================================================
+
+    # Um item de menu foi encontrado no inventário real de um jogador. Isso não
+    # é sujeira: é a assinatura de uma tentativa de dupe. Vale acordar alguém.
+    # Placeholders: {count} {reason}
+    menu-item-recovered:
+      enabled: true
+      webhook: "security"
+      priority: "CRITICAL"
+      mention-role-id: ""
+      title: "🚨 Item de menu recuperado do inventário"
+      description: |-
+        **Jogador:** {player}
+        **UUID:** `{uuid}`
+        **Itens removidos:** {count}
+        **Momento:** {reason}
+
+        Item de menu no inventário real indica tentativa de duplicação.
+      color: 15548997
+      thumbnail: "{avatar}"
+      footer: "ChestShop • Anti-dupe"
+
+    # A oferta mudou entre abrir a confirmação e o jogador aceitar.
+    confirmation-offer-changed:
+      enabled: true
+      webhook: "security"
+      priority: "HIGH"
+      mention-role-id: ""
+      title: "⚠️ Oferta alterada durante a confirmação"
+      description: |-
+        **Jogador:** {player}
+        **Placa:** {sign1} · {sign2} · {sign3} · {sign4}
+        **Local:** `{location}`
+
+        A transação foi recusada: o que a loja oferece agora não é o que foi mostrado.
+      color: 16705372
+      thumbnail: "{avatar}"
+      footer: "ChestShop • Confirmação"
+
+    # Tentativa de usar loja sem rank/permissão. Desligado por padrão:
+    # em servidor cheio isso enche o canal rapidinho.
+    transaction-denied:
+      enabled: false
+      webhook: "security"
+      priority: "LOW"
+      mention-role-id: ""
+      title: "⛔ Transação negada"
+      description: |-
+        **Jogador:** {player}
+        **Motivo:** `{outcome}`
+        **Loja:** {owner}
+        **Local:** `{location}`
+      color: 15548997
+      thumbnail: "{avatar}"
+      footer: "ChestShop • Acesso negado"
+
+    # === TÉCNICO ===========================================================
+
+    # Depósito/estorno falhou no meio de uma transação. É dinheiro: precisa
+    # de gente olhando. Coloque o ID do cargo em mention-role-id.
+    economy-failure:
+      enabled: true
+      webhook: "technical"
+      priority: "CRITICAL"
+      mention-role-id: ""
+      title: "⛔ Falha na economia"
+      description: |-
+        **Contexto:** {context}
+        **Erro:** `{reason}`
+        **Jogador:** {player}
+      color: 15548997
+      thumbnail: ""
+      footer: "ChestShop • Erro de economia"
+
+    technical-error:
+      enabled: true
+      webhook: "technical"
+      priority: "CRITICAL"
+      mention-role-id: ""
+      title: "⛔ Erro técnico"
+      description: |-
+        **Contexto:** {context}
+        **Erro:** `{reason}`
+      color: 15548997
+      thumbnail: ""
+      footer: "ChestShop • Erro técnico"

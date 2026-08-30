@@ -7,6 +7,7 @@ import com.Acrobot.Breeze.Utils.StringUtil;
 import com.Acrobot.ChestShop.ChestShop;
 import com.Acrobot.ChestShop.Configuration.Messages;
 import com.Acrobot.ChestShop.Configuration.Properties;
+import com.Acrobot.ChestShop.Discord.DiscordService;
 import com.Acrobot.ChestShop.Events.PreTransactionEvent;
 import com.Acrobot.ChestShop.Events.TransactionEvent;
 import com.Acrobot.ChestShop.Listeners.Player.PlayerInteract;
@@ -510,6 +511,7 @@ public class ConfirmationManager {
         // A shop owner can edit their sign while somebody is staring at the menu
         if (!Arrays.equals(StringUtil.stripColourCodes(sign.getLines()), pending.getSignLines())) {
             player.sendMessage(Messages.prefix(Messages.CONFIRMATION_OFFER_CHANGED));
+            reportOfferChanged(player, sign);
             return;
         }
 
@@ -527,10 +529,23 @@ public class ConfirmationManager {
 
         if (!matchesOffer(pending, event)) {
             player.sendMessage(Messages.prefix(Messages.CONFIRMATION_OFFER_CHANGED));
+            reportOfferChanged(player, sign);
             return;
         }
 
         ChestShop.callEvent(new TransactionEvent(event, sign));
+    }
+
+    /**
+     * The shop is not offering what the player was shown. Usually the owner just edited the sign,
+     * but it is also what a timing attack would look like, so it is worth a line in the audit.
+     */
+    private static void reportOfferChanged(Player player, Sign sign) {
+        DiscordService discord = ChestShop.getDiscordService();
+
+        if (discord != null) {
+            discord.onOfferChanged(player, sign.getLines(), sign.getLocation());
+        }
     }
 
     private static boolean isTooFarAway(Player player, PendingConfirmation pending) {

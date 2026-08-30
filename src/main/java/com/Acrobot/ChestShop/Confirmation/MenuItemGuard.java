@@ -2,6 +2,7 @@ package com.Acrobot.ChestShop.Confirmation;
 
 import com.Acrobot.Breeze.Utils.MaterialUtil;
 import com.Acrobot.ChestShop.ChestShop;
+import com.Acrobot.ChestShop.Discord.DiscordService;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.PlayerInventory;
@@ -138,6 +139,11 @@ public class MenuItemGuard {
             ChestShop.getBukkitLogger().warning("Confirmation menu anti-dupe: removed " + removed
                     + " menu item(s) from " + player.getName() + "'s inventory (" + reason + ")");
             player.updateInventory();
+
+            DiscordService discord = ChestShop.getDiscordService();
+            if (discord != null) {
+                discord.onMenuItemRecovered(player, removed, reason);
+            }
         }
 
         return removed;

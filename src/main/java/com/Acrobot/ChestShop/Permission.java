@@ -44,7 +44,9 @@ public enum Permission {
     CONFIRMATION_TOGGLE("ChestShop.confirmation.toggle"),
     CONFIRMATION_BYPASS("ChestShop.confirmation.bypass"),
 
-    RELOAD("ChestShop.reload");
+    RELOAD("ChestShop.reload"),
+
+    DISCORD("ChestShop.discord");
 
     private final String permission;
 

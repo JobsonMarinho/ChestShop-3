@@ -2,6 +2,7 @@ package com.Acrobot.ChestShop.Commands;
 
 import com.Acrobot.ChestShop.ChestShop;
 import com.Acrobot.ChestShop.Configuration.Messages;
+import com.Acrobot.ChestShop.Discord.DiscordService;
 import com.Acrobot.ChestShop.Permission;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
@@ -27,10 +28,18 @@ public class Reload implements CommandExecutor {
 
         if (ChestShop.reloadConfiguration()) {
             sender.sendMessage(Messages.prefix(Messages.CONFIGURATION_RELOADED));
+            report(sender, "/csreload", "config.yml, local.yml e discord.yml");
         } else {
             sender.sendMessage(Messages.prefix(Messages.CONFIGURATION_RELOAD_FAILED));
         }
 
         return true;
+    }
+    private static void report(CommandSender sender, String command, String details) {
+        DiscordService discord = ChestShop.getDiscordService();
+
+        if (discord != null) {
+            discord.onStaffCommand(sender.getName(), command, details);
+        }
     }
 }

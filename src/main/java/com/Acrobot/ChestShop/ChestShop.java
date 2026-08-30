@@ -14,6 +14,10 @@ import com.Acrobot.ChestShop.Confirmation.ConfirmationManager;
 import com.Acrobot.ChestShop.Confirmation.ConfirmationMenu;
 import com.Acrobot.ChestShop.Confirmation.ConfirmationPreferences;
 import com.Acrobot.ChestShop.Confirmation.MenuItemGuard;
+import com.Acrobot.ChestShop.Commands.Discord;
+import com.Acrobot.ChestShop.Discord.DiscordConfigLoader;
+import com.Acrobot.ChestShop.Discord.DiscordListener;
+import com.Acrobot.ChestShop.Discord.DiscordService;
 import com.Acrobot.ChestShop.Configuration.Messages;
 import com.Acrobot.ChestShop.Configuration.Properties;
 import com.Acrobot.ChestShop.Database.Migrations;
@@ -87,6 +91,8 @@ public class ChestShop extends JavaPlugin {
     private static Logger logger;
     private FileHandler handler;
 
+    private static DiscordService discordService;
+
     public ChestShop() {
         dataFolder = getDataFolder();
         logger = getLogger();
@@ -110,6 +116,7 @@ public class ChestShop extends JavaPlugin {
         ConfirmationPreferences.load();
         MenuItemGuard.initialize();
         BedrockForms.initialize();
+        startDiscord();
 
         if (!Dependencies.loadPlugins()) {
             return;
@@ -137,6 +144,10 @@ public class ChestShop extends JavaPlugin {
         getCommand("cstoggle").setExecutor(new Toggle());
         getCommand("csreload").setExecutor(new Reload());
         getCommand("lojamenu").setExecutor(new SettingsMenu());
+
+        Discord discordCommand = new Discord();
+        getCommand("csdiscord").setExecutor(discordCommand);
+        getCommand("csdiscord").setTabCompleter(discordCommand);
 
         Confirm confirm = new Confirm();
         getCommand("csconfirm").setExecutor(confirm);
@@ -241,8 +252,55 @@ public class ChestShop extends JavaPlugin {
         // A menu that was opened under the old settings must not be accepted under the new ones
         ConfirmationManager.cancelAll(Messages.CONFIRMATION_CANCELLED);
         ConfirmationMenu.resetLayoutWarning();
+        reloadDiscordConfiguration();
 
         return true;
+    }
+
+    /**
+     * Reads discord.yml and brings the webhook system up.
+     *
+     * Wrapped whole: a broken webhook config is a reason for shop logs not to reach Discord, never
+     * a reason for the shop plugin not to load.
+     */
+    private void startDiscord() {
+        try {
+            File file = new File(dataFolder, "discord.yml");
+
+            if (!file.exists()) {
+                saveResource("discord.yml", false);
+            }
+
+            discordService = new DiscordService(this, DiscordConfigLoader.load(file));
+            discordService.start();
+
+            registerEvent(new DiscordListener(discordService));
+        } catch (Throwable failure) {
+            discordService = null;
+            logger.log(java.util.logging.Level.WARNING, "Could not start the Discord webhook system", failure);
+        }
+    }
+
+    /**
+     * @return The webhook system, or null if it could not be started
+     */
+    public static DiscordService getDiscordService() {
+        return discordService;
+    }
+
+    /**
+     * Re-reads discord.yml. The service swaps its snapshot, so nothing is restarted.
+     */
+    public static void reloadDiscordConfiguration() {
+        if (discordService == null) {
+            return;
+        }
+
+        try {
+            discordService.reload(DiscordConfigLoader.load(new File(dataFolder, "discord.yml")));
+        } catch (Throwable failure) {
+            logger.log(java.util.logging.Level.WARNING, "Could not reload discord.yml", failure);
+        }
     }
 
     public static File loadFile(String string) {
@@ -285,6 +343,10 @@ public class ChestShop extends JavaPlugin {
         ConfirmationManager.cancelAll(Messages.CONFIRMATION_CANCELLED);
 
         getServer().getScheduler().cancelTasks(this);
+
+        if (discordService != null) {
+            discordService.stop();
+        }
 
         ConfirmationPreferences.unload();
         Toggle.clearToggledPlayers();

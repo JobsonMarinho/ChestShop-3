@@ -39,6 +39,14 @@ commands:
   csreload:
     description: Reloads ChestShop's configuration files
     usage: /<command>
+  csdiscord:
+    description: Manages the Discord webhook system
+    usage: |
+           /<command> §7status§f §2(sistema, fila, contadores)
+           /<command> §7validate§f §2(confere cada destino)
+           /<command> §7test <destino>§f §2(envia um embed de teste)
+           /<command> §7reload§f §2(relê o discord.yml)
+           /<command> §7clearqueue§f §2(esvazia a fila)
 
 permissions:
   ChestShop.*:
@@ -48,6 +56,7 @@ permissions:
         ChestShop.shop.*: true
         ChestShop.admin: true
         ChestShop.reload: true
+        ChestShop.discord: true
         ChestShop.shop.buy.playershop: true
         ChestShop.shop.buy.adminshop: true
         ChestShop.shop.sell.playershop: true
@@ -107,6 +116,9 @@ permissions:
     default: false
   ChestShop.reload:
     description: Allows the user to reload ChestShop's configuration with /csreload
+    default: op
+  ChestShop.discord:
+    description: Allows the user to manage the Discord webhook system with /csdiscord
     default: op
   ChestShop.admin:
     description: Allows user to modify/destroy other stores and create an Admin Shops
