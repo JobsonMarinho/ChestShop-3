@@ -1,3 +1,5 @@
+![ChestShop — illustrated Minecraft project banner](assets/chestshop-3-banner.png)
+
 ChestShop
 ================================
 
