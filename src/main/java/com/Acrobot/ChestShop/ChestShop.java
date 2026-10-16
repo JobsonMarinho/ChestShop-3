@@ -18,6 +18,10 @@ import com.Acrobot.ChestShop.Commands.Discord;
 import com.Acrobot.ChestShop.Discord.DiscordConfigLoader;
 import com.Acrobot.ChestShop.Discord.DiscordListener;
 import com.Acrobot.ChestShop.Discord.DiscordService;
+import com.Acrobot.ChestShop.logarchive.LogArchiveKit.LogArchiveRule;
+import com.Acrobot.ChestShop.logarchive.LogArchiveKit.LogArchiveSettings;
+import com.Acrobot.ChestShop.logarchive.LogArchiveKit.LogArchiver;
+import com.Acrobot.ChestShop.logarchive.LogArchiveKit.LogBundle;
 import com.Acrobot.ChestShop.Configuration.Messages;
 import com.Acrobot.ChestShop.Configuration.Properties;
 import com.Acrobot.ChestShop.Database.Migrations;
@@ -71,6 +75,8 @@ import org.bukkit.plugin.java.JavaPlugin;
 
 import java.io.File;
 import java.io.IOException;
+import java.time.Clock;
+import java.util.Collections;
 import java.util.List;
 import java.util.logging.FileHandler;
 import java.util.logging.Logger;
@@ -92,6 +98,7 @@ public class ChestShop extends JavaPlugin {
     private FileHandler handler;
 
     private static DiscordService discordService;
+    private LogArchiver logArchiver;
 
     public ChestShop() {
         dataFolder = getDataFolder();
@@ -117,6 +124,7 @@ public class ChestShop extends JavaPlugin {
         MenuItemGuard.initialize();
         BedrockForms.initialize();
         startDiscord();
+        startLogArchiver();
 
         if (!Dependencies.loadPlugins()) {
             return;
@@ -263,6 +271,25 @@ public class ChestShop extends JavaPlugin {
      * Wrapped whole: a broken webhook config is a reason for shop logs not to reach Discord, never
      * a reason for the shop plugin not to load.
      */
+    private void startLogArchiver() {
+        File logsDir = new File(dataFolder, "logs");
+        List<LogArchiveRule> rules = Collections.singletonList(
+                LogArchiveRule.builder("discord", logsDir, LogBundle.MONTH, 30)
+                        .prefix("discord-")
+                        .rotateUndated(true)
+                        .undatedNames(Collections.singleton("discord.log"))
+                        .build()
+        );
+        logArchiver = new LogArchiver(
+                () -> rules,
+                () -> LogArchiveSettings.DEFAULT,
+                logger,
+                Clock.systemDefaultZone(),
+                "ChestShop-LogArchiver"
+        );
+        logArchiver.start();
+    }
+
     private void startDiscord() {
         try {
             File file = new File(dataFolder, "discord.yml");
@@ -344,6 +371,10 @@ public class ChestShop extends JavaPlugin {
 
         getServer().getScheduler().cancelTasks(this);
 
+        if (logArchiver != null) {
+            logArchiver.stop();
+            logArchiver = null;
+        }
         if (discordService != null) {
             discordService.stop();
         }

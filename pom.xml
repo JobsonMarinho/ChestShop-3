@@ -285,6 +285,13 @@
             <version>0.1.0.10</version>
             <scope>provided</scope>
         </dependency>
+
+        <dependency>
+            <groupId>io.airlift</groupId>
+            <artifactId>aircompressor</artifactId>
+            <version>0.27</version>
+            <scope>compile</scope>
+        </dependency>
     </dependencies>
 
     <build>
@@ -316,6 +323,7 @@
                                     <include>net.gravitydevelopment.updater</include>
                                     <include>com.j256.ormlite</include>
                                     <include>org.apache.logging.log4j</include>
+                                    <include>io.airlift</include>
                                 </includes>
                             </artifactSet>
                             <relocations>
@@ -334,6 +342,10 @@
                                 <relocation>
                                     <pattern>com.j256.ormlite</pattern>
                                     <shadedPattern>com.Acrobot.ChestShop.ORMlite</shadedPattern>
+                                </relocation>
+                                <relocation>
+                                    <pattern>io.airlift.compress</pattern>
+                                    <shadedPattern>com.Acrobot.ChestShop.aircompressor</shadedPattern>
                                 </relocation>
                             </relocations>
                         </configuration>
