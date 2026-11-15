@@ -194,11 +194,12 @@ public class MaterialUtil {
     public static String getName(ItemStack itemStack, int maxWidth) {
         String alias = Odd.getAlias(itemStack);
         String itemName = alias != null ? alias : itemStack.getType().toString();
-        if (itemStack.getType() != Material.HUGE_MUSHROOM_2 && itemName.endsWith("_2")) {
+        String data = DataValue.name(itemStack);
+        // Only a species name (e.g. "Dark Oak Log") leads back to the _2 form; "Log:1" would be LOG:1 instead of LOG_2:1
+        if (data != null && itemStack.getType() != Material.HUGE_MUSHROOM_2 && itemName.endsWith("_2")) {
             itemName = itemName.substring(0, itemName.length() - 2);
         }
 
-        String data = DataValue.name(itemStack);
         String durability = "";
         if (data == null) {
             if (itemStack.getDurability() != 0) {

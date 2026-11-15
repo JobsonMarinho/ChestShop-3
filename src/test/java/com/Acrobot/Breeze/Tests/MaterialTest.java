@@ -1,6 +1,7 @@
 package com.Acrobot.Breeze.Tests;
 
 import com.Acrobot.Breeze.Utils.MaterialUtil;
+import com.Acrobot.Breeze.Utils.StringUtil;
 import org.bukkit.Material;
 import org.bukkit.inventory.ItemStack;
 import org.junit.Test;
@@ -31,6 +32,16 @@ public class MaterialTest {
         for (Material material : Material.values()) {
             String shortenedName = MaterialUtil.getShortenedName(material.toString(), MaterialUtil.MAXIMUM_SIGN_WIDTH);
             assertSame(material, MaterialUtil.getMaterial(shortenedName));
+        }
+    }
+
+    @Test
+    public void testAlternativeFormCodes() {
+        // getName(LOG_2:1) must not drop the "2", or the code resolves to LOG:1 (spruce)
+        for (Material material : new Material[]{Material.LOG_2, Material.LEAVES_2}) {
+            ItemStack parsed = MaterialUtil.getItem(StringUtil.capitalizeFirstLetter(material.toString(), '_') + ":1");
+            assertSame(material, parsed.getType());
+            assertSame((short) 1, parsed.getDurability());
         }
     }
 }
